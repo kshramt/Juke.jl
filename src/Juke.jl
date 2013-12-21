@@ -21,7 +21,7 @@ type Job
     done::Bool
 end
 Job(command, name) = Job(command, name, false)
-Job(name) = Job((_)->nothing, name)
+Job(name) = Job((_)->error("No method to create ", repr(name)), name)
 
 type JobInfo
     name::JobName
@@ -34,9 +34,20 @@ function new_dsl()
     name_to_job = Dict{JobName, Job}()
 
     # DSL
-    function job(command::Function, name::JobName, deps)
+    function job_(command, name, deps)
         name_to_job[name] = Job(command, name)
         name_graph[name] = Set{JobName}(deps...)
+    end
+
+    job(command::Function, name::Symbol, deps) = job_(command, name, deps)
+    function job(command::Function, name::String, deps)
+        for dep in deps
+            if isa(dep, Symbol)
+                error("File job $name should not depend of command job ", repr(dep), " in ", repr(deps))
+            end
+        end
+
+        job_(command, name, deps)
     end
     job(command::Function, name) = job(command, name, [])
     job(name::JobName, deps) = job((_)->nothing, name, deps)
@@ -53,7 +64,9 @@ function new_dsl()
             end
         end
 
-        target_job.command(JobInfo(target_job, deps))
+        if need_update(name, deps)
+            name_job.command(JobInfo(name, deps))
+        end
     end
     finish() = finish(:default)
 
