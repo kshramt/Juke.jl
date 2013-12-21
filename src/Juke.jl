@@ -21,7 +21,8 @@ type Job
     done::Bool
 end
 Job(command, name) = Job(command, name, false)
-Job(name) = Job((_)->error("No method to create $(str(name))"), name)
+Job(name::String) = Job((_)->error("No method to create $(str(name))"), name)
+Job(name::Symbol) = Job((_)->nothing, name)
 
 type JobInfo
     name::JobName
