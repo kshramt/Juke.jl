@@ -35,14 +35,6 @@ function new_dsl()
     name_to_job = Dict{JobName, Job}()
 
     # DSL
-    function job_(command, name, deps)
-        if haskey(name_graph, name)
-            error("Multiple job declarations for $(str(name))")
-        end
-        name_to_job[name] = Job(command, name)
-        name_graph[name] = Set{JobName}(deps...)
-    end
-
     job(command::Function, name::Symbol, deps) = job_(command, name, deps)
     function job(command::Function, name::String, deps)
         for dep in deps
@@ -56,6 +48,14 @@ function new_dsl()
     job(command::Function, name) = job(command, name, [])
     job(name::JobName, deps) = job((_)->nothing, name, deps)
     job(name) = job(name, [])
+
+    function job_(command, name, deps)
+        if haskey(name_graph, name)
+            error("Multiple job declarations for $(str(name))")
+        end
+        name_to_job[name] = Job(command, name)
+        name_graph[name] = Set{JobName}(deps...)
+    end
 
     finish(name::String) = finish_(name)
     function finish(name::Symbol)
