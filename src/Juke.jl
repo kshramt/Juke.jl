@@ -82,7 +82,6 @@ function new_dsl()
         end
     end
 
-    # Helper
     function make_get_set!(d, inifn)
         (k)->begin
             if haskey(d, k)
