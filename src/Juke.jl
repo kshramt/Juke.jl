@@ -87,36 +87,36 @@ function new_dsl()
     job, finish
 end
 
-    function need_update(name::Number, dep::Number)
-        name < dep
+function need_update(name::Number, dep::Number)
+    name < dep
+end
+need_update(name::Symbol, dep::Symbol) = true
+need_update(name::Symbol, dep) = true
+need_update(name, dep::Symbol) = true
+function need_update(name::String, dep::String)
+    if ispath(name) && ispath(dep)
+        need_update(t_of(name), t_of(dep))
+    else
+        true
     end
-    need_update(name::Symbol, dep::Symbol) = true
-    need_update(name::Symbol, dep) = true
-    need_update(name, dep::Symbol) = true
-    function need_update(name::String, dep::String)
-        if ispath(name) && ispath(dep)
-            need_update(t_of(name), t_of(dep))
-        else
-            true
+end
+function need_update(name, deps)
+    if length(deps) == 0
+        !ispath(name)
+    else
+        any(deps) do dep
+            need_update(name, dep)
         end
     end
-    function need_update(name, deps)
-        if length(deps) == 0
-            !ispath(name)
-        else
-            any(deps) do dep
-                need_update(name, dep)
-            end
-        end
-    end
+end
 
-    function t_of(f::String)
-        if ispath(f)
-            mtime(f)
-        else
-            -Inf
-        end
+function t_of(f::String)
+    if ispath(f)
+        mtime(f)
+    else
+        -Inf
     end
+end
 
 
 end
