@@ -106,7 +106,7 @@ need_update(name::Symbol, dep) = true
 need_update(name, dep::Symbol) = true
 function need_update(name::String, dep::String)
     if ispath(name) && ispath(dep)
-        need_update(t_of(name), t_of(dep))
+        need_update(mtime(name), mtime(dep))
     else
         true
     end
@@ -118,14 +118,6 @@ function need_update(name, deps)
         any(deps) do dep
             need_update(name, dep)
         end
-    end
-end
-
-function t_of(f::String)
-    if ispath(f)
-        mtime(f)
-    else
-        -Inf
     end
 end
 
