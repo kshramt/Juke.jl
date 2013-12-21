@@ -6,6 +6,13 @@ macro p(ex)
     :(println($(string(ex)), ":\n", $ex, "\n"))
 end
 
+type Error <: Exception
+    msg::String
+end
+error(s::String) = throw(Error(s))
+error(s...) = error(string(s...))
+Base.showerror(io::IO, e::Error) = print(io, e.msg)
+
 JobName = Union(String, Symbol)
 
 type Job
