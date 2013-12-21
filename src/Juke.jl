@@ -57,14 +57,23 @@ function new_dsl()
     job(name::JobName, deps) = job((_)->nothing, name, deps)
     job(name) = job(name, [])
 
-    function finish(name::JobName)
+    finish(name::String) = finish_(name)
+    function finish(name::Symbol)
+        if !haskey(name_graph, name)
+            error("$(str(name)) have not declared")
+        end
+        finish_(name)
+    end
+    finish() = finish(:default)
+
+    function finish_(name)
         name_job = get_job(name)
         name_job.done = true
 
         deps = get_deps(name)
         for dep in deps
             if !get_job(dep).done
-                finish(dep)
+                finish_(dep)
             end
         end
 
@@ -72,7 +81,6 @@ function new_dsl()
             name_job.command(JobInfo(name, deps))
         end
     end
-    finish() = finish(:default)
 
     # Helper
     function make_get_set!(d, inifn)
