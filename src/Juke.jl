@@ -35,20 +35,20 @@ function new_dsl()
     job(name::JobName, deps) = job((_)->nothing, name, deps)
     job(name) = job(name, [])
 
-    function invoke(target::JobName)
+    function finish(target::JobName)
         target_job = get_job(target)
         target_job.done = true
 
         deps = get_deps(target)
         for dep in deps
             if !get_job(dep).done
-                invoke(dep)
+                finish(dep)
             end
         end
 
         target_job.command(JobInfo(target, deps))
     end
-    invoke() = invoke(:default)
+    finish() = finish(:default)
 
     # Helper
     function make_get_set!(d, inifn)
@@ -64,7 +64,7 @@ function new_dsl()
     get_deps = make_get_set!(name_graph, (_)->Set{JobName}())
 
     # Export
-    job, invoke
+    job, finish
 end
 
 end
