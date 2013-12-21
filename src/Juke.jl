@@ -35,6 +35,9 @@ function new_dsl()
 
     # DSL
     function job_(command, name, deps)
+        if haskey(name_graph, name)
+            error("Multiple job declarations for $(str(name))")
+        end
         name_to_job[name] = Job(command, name)
         name_graph[name] = Set{JobName}(deps...)
     end
