@@ -71,6 +71,22 @@ function new_dsl()
     finish() = finish(:default)
 
     # Helper
+    function make_get_set!(d, inifn)
+        (k)->begin
+            if haskey(d, k)
+                d[k]
+            else
+                d[k] = inifn(k)
+            end
+        end
+    end
+    get_job = make_get_set!(name_to_job, (name)->Job(name))
+    get_deps = make_get_set!(name_graph, (_)->Set{JobName}())
+
+    # Export
+    job, finish
+end
+
     function need_update(name::Number, dep::Number)
         name < dep
     end
@@ -102,20 +118,5 @@ function new_dsl()
         end
     end
 
-    function make_get_set!(d, inifn)
-        (k)->begin
-            if haskey(d, k)
-                d[k]
-            else
-                d[k] = inifn(k)
-            end
-        end
-    end
-    get_job = make_get_set!(name_to_job, (name)->Job(name))
-    get_deps = make_get_set!(name_graph, (_)->Set{JobName}())
-
-    # Export
-    job, finish
-end
 
 end
