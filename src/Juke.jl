@@ -43,7 +43,7 @@ function new_dsl()
     function job(command::Function, name::String, deps)
         for dep in deps
             if isa(dep, Symbol)
-                error("File job $name should not depend of command job ", repr(dep), " in ", repr(deps))
+                error("File job $name should not depend on a command job ", repr(dep), " in ", repr(deps))
             end
         end
 
