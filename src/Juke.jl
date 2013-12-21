@@ -42,18 +42,18 @@ function new_dsl()
     job(name::JobName, deps) = job((_)->nothing, name, deps)
     job(name) = job(name, [])
 
-    function finish(target::JobName)
-        target_job = get_job(target)
-        target_job.done = true
+    function finish(name::JobName)
+        name_job = get_job(name)
+        name_job.done = true
 
-        deps = get_deps(target)
+        deps = get_deps(name)
         for dep in deps
             if !get_job(dep).done
                 finish(dep)
             end
         end
 
-        target_job.command(JobInfo(target, deps))
+        target_job.command(JobInfo(target_job, deps))
     end
     finish() = finish(:default)
 
