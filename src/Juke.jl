@@ -21,7 +21,7 @@ type Job
     done::Bool
 end
 Job(command, name) = Job(command, name, false)
-Job(name) = Job((_)->error("No method to create ", repr(name)), name)
+Job(name) = Job((_)->error("No method to create $(str(name))"), name)
 
 type JobInfo
     name::JobName
@@ -43,7 +43,7 @@ function new_dsl()
     function job(command::Function, name::String, deps)
         for dep in deps
             if isa(dep, Symbol)
-                error("File job $name should not depend on a command job ", repr(dep), " in ", repr(deps))
+                error("File job $name should not depend on a command job $(str(dep)) in $(str(deps))")
             end
         end
 
@@ -118,5 +118,8 @@ function t_of(f::String)
     end
 end
 
+str(name::String) = name
+str(name::Symbol) = ":$name"
+str(x) = repr(x)
 
 end
