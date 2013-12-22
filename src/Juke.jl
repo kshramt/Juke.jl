@@ -1,7 +1,5 @@
 module Juke
 
-export new_dsl
-
 macro p(ex)
     :(println($(string(ex)), ":\n", $ex, "\n"))
 end
