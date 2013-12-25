@@ -149,7 +149,7 @@ function new_dsl()
     get_deps = make_get_set!(name_graph, _->Set{JobName}())
 
     # Export
-    job, finish
+    finish, job, rule
 end
 
 function get_prefix_suffix(s)
