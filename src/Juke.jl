@@ -13,27 +13,14 @@ Base.showerror(io::IO, e::Error) = print(io, e.msg)
 
 typealias JobName Union(String, Symbol)
 
-type Command
-    fn::Function
-    done::Bool
-end
-Command(fn) = Command(fn, false)
-EMPTY_COMMAND = Command(j->nothing)
-function run_command(command::Command, args...)
-    if !command.done
-        command.fn(args...)
-        command.done = true
-    end
-end
-
 type Job
-    command::Command
+    command::Function
     name::JobName
     done::Bool
 end
 Job(command, name) = Job(command, name, false)
-Job(name::String) = Job(Command(_->error("No command to create $(str(name))")), name)
-Job(name::Symbol) = Job(EMPTY_COMMAND, name)
+Job(name::String) = Job(_->error("No command to create $(str(name))"), name)
+Job(name::Symbol) = Job(_->nothing, name)
 
 type JobInfo
     name::JobName
@@ -50,21 +37,12 @@ function new_dsl()
 
     # DSL
     job(name::Symbol, dep::JobName) = job(name, (dep,))
-    job(name::Symbol, deps) = job(EMPTY_COMMAND, name, deps)
+    job(name::Symbol, deps) = job(_->nothing, name, deps)
     job(name::String, deps) = error("File job $name should have command")
-    job(names, deps) = for name in names
-        job(name, deps)
-    end
-    job(command::Function, name::JobName) = job(Command(command), name)
-    job(command::Command, name::JobName) = job(command, name, ())
-    job(command::Function, names) = job(Command(command), names)
-    job(command::Command, names) = for name in names
-        job(command, name)
-    end
-    job(command::Function, name::JobName, dep::JobName) = job(Command(command), name, dep)
-    job(command::Command, name::JobName, dep::JobName) = job(command, name, (dep,))
-    job(command::Function, name::JobName, deps) = job(Command(command), name, deps)
-    function job(command::Command, name::String, deps)
+    job(command::Function, name::JobName) = job(command, name, ())
+    job(command::Function, names) = job(command, names, ())
+    job(command::Function, name::JobName, dep::JobName) = job(command, name, (dep,))
+    function job(command::Function, name::String, deps)
         for dep in deps
             if isa(dep, Symbol)
                 error("File job $name should not depend on a command job $(str(dep)) in $(str(deps))")
@@ -72,13 +50,15 @@ function new_dsl()
         end
         job_(command, name, deps)
     end
-    job(command::Command, name::Symbol, deps) = job_(command, name, deps)
-    job(command::Function, names, deps) = job(Command(command), names, deps)
-    job(command::Command, names, deps) = for name in names
+    job(command::Function, name::Symbol, deps) = job_(command, name, deps)
+    job(command::Function, names, deps) = for name in names
+        if isa(name, Symbol)
+            error("Command job is not allowed in a multiple job declaration")
+        end
         job(command, name, deps)
     end
 
-    function job_(command::Command, name::JobName, deps)
+    function job_(command::Function, name::JobName, deps)
         if haskey(name_graph, name)
             error("Multiple job declarations for $(str(name))")
         end
@@ -132,7 +112,7 @@ function new_dsl()
         end
 
         if need_update(name, deps)
-            run_command(name_job.command, JobInfo(name, deps))
+            name_job.command(JobInfo(name, deps))
         end
     end
 
