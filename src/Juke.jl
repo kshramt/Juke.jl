@@ -81,7 +81,7 @@ function new_dsl()
     end
 
     function make_get_set!(d, inifn)
-        (k)->begin
+        k->begin
             if haskey(d, k)
                 d[k]
             else
@@ -89,8 +89,8 @@ function new_dsl()
             end
         end
     end
-    get_job = make_get_set!(name_to_job, (name)->Job(name))
-    get_deps = make_get_set!(name_graph, (_)->Set{JobName}())
+    get_job = make_get_set!(name_to_job, name->Job(name))
+    get_deps = make_get_set!(name_graph, _->Set{JobName}())
 
     # Export
     job, finish
