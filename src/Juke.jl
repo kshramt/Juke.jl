@@ -60,7 +60,7 @@ function new_dsl()
 
     function job_(command::Function, name::JobName, deps)
         if haskey(name_graph, name)
-            error("Multiple job declarations for $(str(name))")
+            error("Overriding job declarations for $(str(name))")
         end
         name_to_job[name] = Job(command, name)
         name_graph[name] = Set{JobName}(deps...)
@@ -70,14 +70,14 @@ function new_dsl()
         push!(rules, (command, match_fn, name->ensure_coll(deps_fn(name))))
     function rule(command, r::Regex, deps_fn::Function)
         if r in rules_regex
-            error("Multiple rule declarations for $(str(r))")
+            error("Overriding rule declarations for $(str(r))")
         end
         push!(rules_regex, r)
         rule(command, name->(match(r, name) !== nothing), name->deps_fn(match(r, name)))
     end
     function rule(command, prefix_suffix::(String, String), deps_fn::Function)
         if prefix_suffix in rules_prefix_suffix
-            error("Multiple rule declarations for $(str(prefix_suffix))")
+            error("Overriding rule declarations for $(str(prefix_suffix))")
         end
         push!(rules_prefix_suffix, prefix_suffix)
         prefix, suffix = prefix_suffix
