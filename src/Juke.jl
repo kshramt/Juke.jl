@@ -13,6 +13,19 @@ Base.showerror(io::IO, e::Error) = print(io, e.msg)
 
 typealias JobName Union(String, Symbol)
 
+type Command
+    fn::Function
+    done::Bool
+end
+Command(fn) = Command(fn, false)
+EMPTY_COMMAND = Command(j->nothing)
+function run_command(command::Command, args...)
+    if !command.done
+        command.fn(args...)
+        command.done = true
+    end
+end
+
 type Job
     command::Function
     name::JobName
