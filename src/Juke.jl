@@ -31,6 +31,9 @@ function new_dsl()
     # Environment
     name_graph = Dict{JobName, Set{JobName}}()
     name_to_job = Dict{JobName, Job}()
+    rules = Set{(Function, Function, Function)}()
+    rules_regex = Set{Regex}()
+    rules_prefix_suffix = Set{(String, String)}()
 
     # DSL
     job(command::Function, name::Symbol, deps) = job_(command, name, deps)
@@ -54,6 +57,36 @@ function new_dsl()
         name_to_job[name] = Job(command, name)
         name_graph[name] = Set{JobName}(deps...)
     end
+
+    rule(command::Function, match_fn::Function, deps_fn::Function) =
+        push!(rules, (command, match_fn, name->ensure_coll(deps_fn(name))))
+    function rule(command, r::Regex, deps_fn::Function)
+        if r in rules_regex
+            error("Multiple rule declarations for $(str(r))")
+        end
+        push!(rules_regex, r)
+        rule(command, name->(match(r, name) !== nothing), name->deps_fn(match(r, name)))
+    end
+    function rule(command, prefix_suffix::(String, String), deps_fn::Function)
+        if prefix_suffix in rules_prefix_suffix
+            error("Multiple rule declarations for $(str(prefix_suffix))")
+        end
+        push!(rules_prefix_suffix, prefix_suffix)
+        prefix, suffix = prefix_suffix
+        len_prefix = length(prefix)
+        len_suffix = length(suffix)
+        rule(command, name->beginswith(name, prefix) && endswith(name, suffix)
+             , name->deps_fn(name[len_prefix:end-len_suffix])
+             )
+    end
+    rule(command, prefix_suffix::(String, String), dep_prefix_suffix::(String, String)) =
+        rule(command, prefix_suffix, (dep_prefix_suffix,))
+    rule(command, prefix_suffix::(String, String), deps_prefix_suffix) =
+        rule(command, prefix_suffix, stem->map(d_p_s->"$(d_p_s[1])$stem$(d_p_s[2])"
+                                               , deps_prefix_suffix
+                                               ))
+    rule(command, name::String, dep::String) = rule(command, name, (dep,))
+    rule(command, name::String, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
 
     finish(name::String) = finish_(name)
     function finish(name::Symbol)
@@ -95,6 +128,17 @@ function new_dsl()
     # Export
     job, finish
 end
+
+function get_prefix_suffix(s)
+    prefix_suffix = split(s, '%')
+    if !length(s) == 2
+        error("Multiple stem is not allowed: $(str(s))")
+    end
+    prefix_suffix
+end
+
+ensure_coll(x::JobName) = Set{JobName}(x)
+ensure_coll(xs) = xs
 
 function need_update(name::Number, dep::Number)
     name < dep
