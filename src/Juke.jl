@@ -19,8 +19,6 @@ type Job
     done::Bool
 end
 Job(command, name) = Job(command, name, false)
-Job(name::String) = Job(_->error("No command to create $(str(name))"), name)
-Job(name::Symbol) = Job(_->nothing, name)
 
 type JobInfo
     name::JobName
@@ -96,40 +94,98 @@ function new_dsl()
     rule(command, name::String, dep::String) = rule(command, name, (dep,))
     rule(command, name::String, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
 
-    finish(name::String) = finish_(name)
-    finish(name::Symbol) = haskey(name_to_job, name) ? finish_(name) : error("$(str(name)) have not declared")
     finish() = finish(:default)
+    finish(name::JobName) = finish((name,))
+    finish(names) = finish_(names)
 
-    function finish_(name)
-        name_job = get_job(name)
-        name_job.done = true
-
-        deps = get_deps(name)
-        for dep in deps
-            if !get_job(dep).done
-                finish_(dep)
-            end
-        end
-
-        if need_update(name, deps)
-            name_job.command(JobInfo(name, deps))
-        end
+    function finish_(names)
+        resolve_all(names)
+        finish_recur(names)
     end
 
-    function make_get_set!(d, inifn)
-        k->begin
-            if haskey(d, k)
-                d[k]
+    function resolve_all(invoked_names)
+        undeclared_job_names = setdiff(union(union(values(name_graph)...)
+                                             , Set{JobName}(invoked_names...))
+                                       , Set{JobName}(keys(name_graph)...))
+
+        for name in undeclared_job_names
+            if isa(name, Symbol)
+                error("Undeclared command job: $(str(name))")
+            end
+
+            if ispath(name)
+                job(j->error("No command to create $(str(j.name))"), name, ())
             else
-                d[k] = inifn(k)
+                found, new_name_graph, new_name_to_job = resolve(name, rules, Set{JobName}(keys(name_to_job)...))
+                if found
+                    for (new_name, deps) in new_name_graph
+                        job(new_name_to_job[new_name], new_name, deps)
+                    end
+                else
+                    error("Not exist and no job or rule for $(str(name))")
+                end
             end
         end
     end
-    get_job = make_get_set!(name_to_job, name->Job(name))
-    get_deps = make_get_set!(name_graph, _->Set{JobName}())
+
+    function finish_recur(name::JobName)
+        j = name_to_job[name]
+        if !j.done
+            j.done = true
+            deps = name_graph[name]
+            for dep in deps
+                finish_recur(dep)
+            end
+
+            if need_update(name, deps)
+                j.command(JobInfo(name, deps))
+            end
+        end
+    end
+    finish_recur(names) = for name in names
+        finish_recur(name)
+    end
 
     # Export
     finish, job, rule
+end
+
+function resolve(name::String, rules::Set{(Function, Function, Function)}
+                 , goals::Set{JobName}, parent_names=Set{JobName}())
+    if name in parent_names
+        return false, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
+    end
+    if name in goals
+        return true, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
+    end
+
+    new_parent_names = union(parent_names, name)
+    for (command, match_fn, deps_fn) in rules
+        if match_fn(name)
+            deps = deps_fn(name)
+            new_name_graph = [name=>deps]
+            new_name_to_command = [name=>command]
+            new_goals = copy(goals)
+            ok = true
+            for dep in deps
+                ok_, n_n_g, n_n_t_c = resolve(dep, rules, new_goals
+                                              , new_parent_names
+                                              )
+                if ok_
+                    merge!(new_name_graph, n_n_g)
+                    merge!(new_name_to_command, n_n_t_c)
+                    union!(new_goals, Set(keys(n_n_t_c)...))
+                else
+                    ok = false
+                    break
+                end
+            end
+            if ok
+                return true, new_name_graph, new_name_to_command
+            end
+        end
+    end
+    false, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
 end
 
 function get_prefix_suffix(s)
