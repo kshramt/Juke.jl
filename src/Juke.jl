@@ -81,16 +81,14 @@ function new_dsl()
         prefix, suffix = prefix_suffix
         len_prefix = length(prefix)
         len_suffix = length(suffix)
-        rule(command, name->beginswith(name, prefix) && endswith(name, suffix)
-             , name->deps_fn(name[len_prefix:end-len_suffix])
-             )
+        rule(command, name->beginswith(name, prefix) && endswith(name, suffix),
+             name->deps_fn(name[len_prefix:end-len_suffix]))
     end
     rule(command, prefix_suffix::(String, String), dep_prefix_suffix::(String, String)) =
         rule(command, prefix_suffix, (dep_prefix_suffix,))
     rule(command, prefix_suffix::(String, String), deps_prefix_suffix) =
-        rule(command, prefix_suffix, stem->map(d_p_s->"$(d_p_s[1])$stem$(d_p_s[2])"
-                                               , deps_prefix_suffix
-                                               ))
+        rule(command, prefix_suffix, stem->map(d_p_s->"$(d_p_s[1])$stem$(d_p_s[2])",
+                                               deps_prefix_suffix))
     rule(command, name::String, dep::String) = rule(command, name, (dep,))
     rule(command, name::String, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
 
@@ -104,9 +102,9 @@ function new_dsl()
     end
 
     function resolve_all(invoked_names)
-        undeclared_job_names = setdiff(union(union(values(name_graph)...)
-                                             , Set{JobName}(invoked_names...))
-                                       , Set{JobName}(keys(name_graph)...))
+        undeclared_job_names = setdiff(union(union(values(name_graph)...),
+                                             Set{JobName}(invoked_names...)),
+                                       Set{JobName}(keys(name_graph)...))
 
         for name in undeclared_job_names
             if isa(name, Symbol)
@@ -150,8 +148,8 @@ function new_dsl()
     finish, job, rule
 end
 
-function resolve(name::String, rules::Set{(Function, Function, Function)}
-                 , goals::Set{JobName}, parent_names=Set{JobName}())
+function resolve(name::String, rules::Set{(Function, Function, Function)},
+                 goals::Set{JobName}, parent_names=Set{JobName}())
     if name in parent_names
         return false, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
     end
@@ -168,9 +166,8 @@ function resolve(name::String, rules::Set{(Function, Function, Function)}
             new_goals = copy(goals)
             ok = true
             for dep in deps
-                ok_, n_n_g, n_n_t_c = resolve(dep, rules, new_goals
-                                              , new_parent_names
-                                              )
+                ok_, n_n_g, n_n_t_c = resolve(dep, rules, new_goals,
+                                              new_parent_names)
                 if ok_
                     merge!(new_name_graph, n_n_g)
                     merge!(new_name_to_command, n_n_t_c)
