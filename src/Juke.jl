@@ -38,14 +38,14 @@ function new_dsl()
     # DSL
     job(name::Symbol, dep::JobName) = job(name, (dep,))
     job(name::Symbol, deps) = job(_->nothing, name, deps)
-    job(name::String, deps) = error("File job $name should have command")
+    job(name::String, deps) = error("File job $(str(name)) should have command")
     job(command::Function, name::JobName) = job(command, name, ())
     job(command::Function, names) = job(command, names, ())
     job(command::Function, name::JobName, dep::JobName) = job(command, name, (dep,))
     function job(command::Function, name::String, deps)
         for dep in deps
             if isa(dep, Symbol)
-                error("File job $name should not depend on a command job $(str(dep)) in $(str(deps))")
+                error("File job $(str(name)) should not depend on a command job $(str(dep)) in $(str(deps))")
             end
         end
         job_(command, name, deps)
