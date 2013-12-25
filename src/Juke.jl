@@ -46,9 +46,9 @@ function new_dsl()
                 error("File job $(str(name)) should not depend on a command job $(str(dep)) in $(str(deps))")
             end
         end
-        job_(command, name, deps)
+        _job(command, name, deps)
     end
-    job(command::Function, name::Symbol, deps) = job_(command, name, deps)
+    job(command::Function, name::Symbol, deps) = _job(command, name, deps)
     job(command::Function, names, deps) = for name in names
         if isa(name, Symbol)
             error("Command job is not allowed in a multiple job declaration")
@@ -56,7 +56,7 @@ function new_dsl()
         job(command, name, deps)
     end
 
-    function job_(command::Function, name::JobName, deps)
+    function _job(command::Function, name::JobName, deps)
         if haskey(name_graph, name)
             error("Overriding job declarations for $(str(name))")
         end
@@ -96,9 +96,9 @@ function new_dsl()
 
     finish() = finish(:default)
     finish(name::JobName) = finish((name,))
-    finish(names) = finish_(names)
+    finish(names) = _finish(names)
 
-    function finish_(names)
+    function _finish(names)
         resolve_all(names)
         finish_recur(names)
     end
