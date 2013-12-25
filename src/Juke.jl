@@ -11,7 +11,7 @@ error(s::String) = throw(Error(s))
 error(s...) = error(string(s...))
 Base.showerror(io::IO, e::Error) = print(io, e.msg)
 
-JobName = Union(String, Symbol)
+typealias JobName Union(String, Symbol)
 
 type Job
     command::Function
@@ -89,12 +89,7 @@ function new_dsl()
     rule(command, name::String, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
 
     finish(name::String) = finish_(name)
-    function finish(name::Symbol)
-        if !haskey(name_graph, name)
-            error("$(str(name)) have not declared")
-        end
-        finish_(name)
-    end
+    finish(name::Symbol) = haskey(name_to_job, name) ? finish_(name) : error("$(str(name)) have not declared")
     finish() = finish(:default)
 
     function finish_(name)
@@ -140,9 +135,7 @@ end
 ensure_coll(x::JobName) = Set{JobName}(x)
 ensure_coll(xs) = xs
 
-function need_update(name::Number, dep::Number)
-    name < dep
-end
+need_update(name::Number, dep::Number) = name < dep
 need_update(name::Symbol, dep::Symbol) = true
 need_update(name::Symbol, dep) = true
 need_update(name, dep::Symbol) = true
