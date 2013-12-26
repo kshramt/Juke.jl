@@ -37,7 +37,7 @@ end
 
 function new_dsl()
     # Environment
-    name_graph = Dict{JobName, Set{JobName}}()
+    name_graph = empty_name_graph()
     name_to_job = Dict{JobName, Job}()
     rules = Set{(Function, Function, Function)}()
     rules_regex = Set{Regex}()
@@ -175,9 +175,9 @@ end
 function resolve(name::String, rules::Set{(Function, Function, Function)},
                  goals::Set{JobName}, parent_names=Set{JobName}())
     if name in parent_names
-        return false, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
+        return false, empty_name_graph(), empty_name_to_command()
     elseif name in goals
-        return true, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
+        return true, empty_name_graph(), empty_name_to_command()
     elseif ispath(name)
         return true, [name=>Set{JobName}()], [name=>j->error("No command to create $(str(j.name))")]
     end
@@ -207,8 +207,11 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
             end
         end
     end
-    false, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
+    false, empty_name_graph(), empty_name_to_command()
 end
+
+empty_name_graph() = Dict{JobName, Set{JobName}}()
+empty_name_to_command() = Dict{JobName, Function}()
 
 function get_prefix_suffix(s)
     prefix_suffix = split(s, '*')
