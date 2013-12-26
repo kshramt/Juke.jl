@@ -1,7 +1,12 @@
 module Juke
 
 macro p(ex)
-    :(println($(string(ex)), ":\n", $ex, "\n"))
+    quote
+        let ret=$(esc(ex))
+            println($(string(ex)), ":\n", ret, "\n")
+            ret
+        end
+    end
 end
 
 type Error <: Exception
