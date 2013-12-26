@@ -206,7 +206,7 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
 end
 
 function get_prefix_suffix(s)
-    prefix_suffix = split(s, '%')
+    prefix_suffix = split(s, '*')
     if !(length(prefix_suffix) == 2)
         error("Multiple stem is not allowed: $(str(s))")
     end

@@ -13,8 +13,8 @@ let
     job(_->nothing, :b, (:e, :f))
     job(_->nothing, :e)
     job(_->nothing, :f, ("a.exe", "b.exe"))
-    rule(_->nothing, "%.exe", "%.o")
-    rule(_->nothing, ("%.o", "%.mod"), "%.F90")
+    rule(_->nothing, "*.exe", "*.o")
+    rule(_->nothing, ("*.o", "*.mod"), "*.F90")
 
     internals[:resolve_all](Set())
     @test internals[:name_graph] == [:default=>Set(:a, :b),
