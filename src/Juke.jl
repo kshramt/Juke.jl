@@ -65,7 +65,7 @@ function new_dsl()
     end
 
     rule(command::Function, match_fn::Function, deps_fn::Function) =
-        push!(rules, (command, match_fn, name->ensure_coll(deps_fn(name))))
+        push!(rules, (command, match_fn, name->ensure_set(deps_fn(name))))
     function rule(command, r::Regex, deps_fn::Function)
         if r in rules_regex
             error("Overriding rule declarations for $(str(r))")
@@ -193,8 +193,8 @@ function get_prefix_suffix(s)
     prefix_suffix
 end
 
-ensure_coll(x::JobName) = Set{JobName}(x)
-ensure_coll(xs) = xs
+ensure_set(x::JobName) = Set{JobName}(x)
+ensure_set(xs) = Set{JobName}(xs...)
 
 need_update(name::Number, dep::Number) = name < dep
 need_update(name::Symbol, dep::Symbol) = true
