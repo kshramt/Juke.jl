@@ -129,15 +129,15 @@ function new_dsl()
                 error("Undeclared command job: $(str(name))")
             end
 
-                found, new_name_graph, new_name_to_command = resolve(name, rules, Set{JobName}(keys(name_to_job)...))
-                if found
-                    for (new_name, deps) in new_name_graph
-                        job(new_name_to_command[new_name], new_name, deps)
-                        union!(additional_names, deps)
-                    end
-                else
-                    error("No job or rule for $(str(name))")
+            found, new_name_graph, new_name_to_command = resolve(name, rules, Set{JobName}(keys(name_to_job)...))
+            if found
+                for (new_name, deps) in new_name_graph
+                    job(new_name_to_command[new_name], new_name, deps)
+                    union!(additional_names, deps)
                 end
+            else
+                error("No job or rule for $(str(name))")
+            end
         end
         resolve_all(additional_names)
     end
