@@ -119,6 +119,11 @@ function new_dsl()
                                              Set{JobName}(invoked_names...)),
                                        Set{JobName}(keys(name_graph)...))
 
+        if length(undeclared_job_names) == 0
+            return nothing
+        end
+
+        additional_names = Set{JobName}()
         for name in undeclared_job_names
             if isa(name, Symbol)
                 error("Undeclared command job: $(str(name))")
@@ -127,16 +132,18 @@ function new_dsl()
             if ispath(name)
                 job(j->error("No command to create $(str(j.name))"), name, ())
             else
-                found, new_name_graph, new_name_to_job = resolve(name, rules, Set{JobName}(keys(name_to_job)...))
+                found, new_name_graph, new_name_to_command = resolve(name, rules, Set{JobName}(keys(name_to_job)...))
                 if found
                     for (new_name, deps) in new_name_graph
-                        job(new_name_to_job[new_name], new_name, deps)
+                        job(new_name_to_command[new_name], new_name, deps)
+                        union!(additional_names, deps)
                     end
                 else
                     error("Not exist and no job or rule for $(str(name))")
                 end
             end
         end
+        resolve_all(additional_names)
     end
 
     function finish_recur(name::JobName)
@@ -193,6 +200,8 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
             if ok
                 return true, new_name_graph, new_name_to_command
             end
+        elseif ispath(name)
+            return true, [name=>Set{JobName}()], [name=>j->error("No command to create $(str(j.name))")]
         end
     end
     false, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
