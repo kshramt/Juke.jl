@@ -129,9 +129,6 @@ function new_dsl()
                 error("Undeclared command job: $(str(name))")
             end
 
-            if ispath(name)
-                job(j->error("No command to create $(str(j.name))"), name, ())
-            else
                 found, new_name_graph, new_name_to_command = resolve(name, rules, Set{JobName}(keys(name_to_job)...))
                 if found
                     for (new_name, deps) in new_name_graph
@@ -141,7 +138,6 @@ function new_dsl()
                 else
                     error("Not exist and no job or rule for $(str(name))")
                 end
-            end
         end
         resolve_all(additional_names)
     end
@@ -175,9 +171,10 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
                  goals::Set{JobName}, parent_names=Set{JobName}())
     if name in parent_names
         return false, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
-    end
-    if name in goals
+    elseif name in goals
         return true, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
+    elseif ispath(name)
+        return true, [name=>Set{JobName}()], [name=>j->error("No command to create $(str(j.name))")]
     end
 
     new_parent_names = union(parent_names, Set(name))
@@ -203,8 +200,6 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
             if ok
                 return true, new_name_graph, new_name_to_command
             end
-        elseif ispath(name)
-            return true, [name=>Set{JobName}()], [name=>j->error("No command to create $(str(j.name))")]
         end
     end
     false, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
