@@ -25,13 +25,18 @@ type JobInfo
     deps::Set{JobName}
 end
 
+type PrefixSuffix
+    prefix::String
+    suffix::String
+end
+
 function new_dsl()
     # Environment
     name_graph = Dict{JobName, Set{JobName}}()
     name_to_job = Dict{JobName, Job}()
     rules = Set{(Function, Function, Function)}()
     rules_regex = Set{Regex}()
-    rules_prefix_suffix = Set{(String, String)}()
+    rules_prefix_suffix = Set{PrefixSuffix}()
 
     # DSL
     job(name::Symbol, dep::JobName) = job(name, (dep,))
@@ -73,21 +78,24 @@ function new_dsl()
         push!(rules_regex, r)
         rule(command, name->(match(r, name) !== nothing), name->deps_fn(match(r, name)))
     end
-    function rule(command, prefix_suffix::(String, String), deps_fn::Function)
+    function rule(command, prefix_suffix::PrefixSuffix, deps_fn::Function)
         if prefix_suffix in rules_prefix_suffix
             error("Overriding rule declarations for $(str(prefix_suffix))")
         end
         push!(rules_prefix_suffix, prefix_suffix)
-        prefix, suffix = prefix_suffix
+        prefix = prefix_suffix.prefix
+        suffix = prefix_suffix.suffix
         len_prefix = length(prefix)
         len_suffix = length(suffix)
         rule(command, name->beginswith(name, prefix) && endswith(name, suffix),
              name->deps_fn(name[len_prefix:end-len_suffix]))
     end
-    rule(command, prefix_suffix::(String, String), dep_prefix_suffix::(String, String)) =
+    rule(command, prefix_suffix::PrefixSuffix, dep_prefix_suffix::PrefixSuffix) =
         rule(command, prefix_suffix, (dep_prefix_suffix,))
-    rule(command, prefix_suffix::(String, String), deps_prefix_suffix) =
-        rule(command, prefix_suffix, stem->map(d_p_s->"$(d_p_s[1])$stem$(d_p_s[2])",
+    rule(command, prefix_suffix::PrefixSuffix, dep::String) =
+        rule(command, prefixsuffix, get_prefix_suffix(dep))
+    rule(command, prefix_suffix::PrefixSuffix, deps_prefix_suffix) =
+        rule(command, prefix_suffix, stem->map(d_p_s->"$(d_p_s.prefix)$stem$(d_p_s.suffix)",
                                                deps_prefix_suffix))
     rule(command, name::String, dep::String) = rule(command, name, (dep,))
     rule(command, name::String, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
@@ -187,10 +195,10 @@ end
 
 function get_prefix_suffix(s)
     prefix_suffix = split(s, '%')
-    if !length(s) == 2
+    if !(length(prefix_suffix) == 2)
         error("Multiple stem is not allowed: $(str(s))")
     end
-    prefix_suffix
+    PrefixSuffix(prefix_suffix...)
 end
 
 ensure_set(x::JobName) = Set{JobName}(x)
