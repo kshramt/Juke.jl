@@ -99,6 +99,10 @@ function new_dsl()
                                                deps_prefix_suffix))
     rule(command, name::String, dep::String) = rule(command, name, (dep,))
     rule(command, name::String, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
+    rule(command, names, dep::String) = rule(command, names, (dep,))
+    rule(command, names, deps) = for name in names
+        rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
+    end
 
     finish() = finish(:default)
     finish(name::JobName) = finish((name,))
