@@ -165,7 +165,10 @@ function new_dsl()
     end
 
     # Export
-    finish, job, rule
+    finish, job, rule,
+    [:name_graph=>name_graph,
+     :name_to_job=>name_to_job,
+     :resolve_all=>resolve_all]
 end
 
 function resolve(name::String, rules::Set{(Function, Function, Function)},
