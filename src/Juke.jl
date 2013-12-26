@@ -44,7 +44,8 @@ function new_dsl()
     job(name::String, deps) = error("File job $(str(name)) should have command")
     job(command::Function, name::JobName) = job(command, name, ())
     job(command::Function, names) = job(command, names, ())
-    job(command::Function, name::JobName, dep::JobName) = job(command, name, (dep,))
+    job(command::Function, name::Symbol, dep::JobName) = job(command, name, (dep,))
+    job(command::Function, name::String, dep::JobName) = job(command, name, (dep,))
     function job(command::Function, name::String, deps)
         for dep in deps
             if isa(dep, Symbol)
@@ -169,7 +170,7 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
         return true, Dict{JobName, Set{JobName}}(), Dict{JobName, Function}()
     end
 
-    new_parent_names = union(parent_names, name)
+    new_parent_names = union(parent_names, Set(name))
     for (command, match_fn, deps_fn) in rules
         if match_fn(name)
             deps = deps_fn(name)
