@@ -1,0 +1,20 @@
+#!/usr/bin/env julia
+
+import Juke
+finish, job, rule = Juke.new_dsl()
+
+function main()
+    dir = pwd()
+    juke_files = split("Jukefile")
+    for f in juke_files
+        path = joinpath(dir, f)
+        if isfile(path)
+            include(path)
+            finish()
+            return
+        end
+    end
+    Juke.error("None of following files are found: $(join(juke_files, ", "))")
+end
+
+main()
