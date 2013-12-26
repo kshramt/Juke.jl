@@ -89,7 +89,7 @@ function new_dsl()
         len_prefix = length(prefix)
         len_suffix = length(suffix)
         rule(command, name->beginswith(name, prefix) && endswith(name, suffix),
-             name->deps_fn(name[len_prefix:end-len_suffix]))
+             name->deps_fn(name[1+len_prefix:end-len_suffix]))
     end
     rule(command, prefix_suffix::PrefixSuffix, dep_prefix_suffix::PrefixSuffix) =
         rule(command, prefix_suffix, (dep_prefix_suffix,))
