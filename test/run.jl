@@ -12,22 +12,22 @@ let
     job(_->nothing, :c)
     job(_->nothing, :b, (:e, :f))
     job(_->nothing, :e)
-    job(_->nothing, :f, ("a.exe", "b.exe"))
+    job(_->nothing, :f, ("a.exe", "b.exe", "a.exe"))
     rule(_->nothing, "*.exe", "*.o")
-    rule(_->nothing, ("*.o", "*.mod"), "*.F90")
+    rule(_->nothing, ("*.o", "*.mod", "*.o"), "*.F90")
 
     internals[:resolve_all](Set())
-    @test internals[:name_graph] == [:default=>Set(:a, :b),
-                                     :a=>Set(:c),
-                                     :c=>Set(),
-                                     :b=>Set(:e, :f),
-                                     :e=>Set(),
-                                     :f=>Set("a.exe", "b.exe"),
-                                     "a.exe"=>Set("a.o"),
-                                     "b.exe"=>Set("b.o"),
-                                     "a.o"=>Set("a.F90"),
-                                     "b.o"=>Set("b.F90"),
-                                     "a.F90"=>Set(),
-                                     "b.F90"=>Set(),
+    @test internals[:name_graph] == [:default=>[:a, :b],
+                                     :a=>[:c],
+                                     :c=>[],
+                                     :b=>[:e, :f],
+                                     :e=>[],
+                                     :f=>["a.exe", "b.exe", "a.exe"],
+                                     "a.exe"=>["a.o"],
+                                     "b.exe"=>["b.o"],
+                                     "a.o"=>["a.F90"],
+                                     "b.o"=>["b.F90"],
+                                     "a.F90"=>[],
+                                     "b.F90"=>[],
                                      ]
 end

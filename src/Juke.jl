@@ -27,7 +27,7 @@ Job(command, name) = Job(command, name, false)
 
 type JobInfo
     name::JobName
-    deps::Set{JobName}
+    deps::Array{JobName, 1}
 end
 
 type PrefixSuffix
@@ -72,11 +72,11 @@ function new_dsl()
             error("Overriding job declarations for $(str(name))")
         end
         name_to_job[name] = Job(command, name)
-        name_graph[name] = Set{JobName}(deps...)
+        name_graph[name] = JobName[deps...]
     end
 
     rule(command::Function, match_fn::Function, deps_fn::Function) =
-        push!(rules, (command, match_fn, name->ensure_set(deps_fn(name))))
+        push!(rules, (command, match_fn, name->ensure_array(deps_fn(name))))
     function rule(command, r::Regex, deps_fn::Function)
         if r in rules_regex
             error("Overriding rule declarations for $(str(r))")
@@ -179,7 +179,7 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
     elseif name in goals
         return true, empty_name_graph(), empty_name_to_command()
     elseif ispath(name)
-        return true, [name=>Set{JobName}()], [name=>j->error("No command to create $(str(j.name))")]
+        return true, [name=>JobName[]], [name=>j->error("No command to create $(str(j.name))")]
     end
 
     new_parent_names = union(parent_names, Set(name))
@@ -210,7 +210,7 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
     false, empty_name_graph(), empty_name_to_command()
 end
 
-empty_name_graph() = Dict{JobName, Set{JobName}}()
+empty_name_graph() = Dict{JobName, Array{JobName, 1}}()
 empty_name_to_command() = Dict{JobName, Function}()
 
 function get_prefix_suffix(s)
@@ -221,8 +221,8 @@ function get_prefix_suffix(s)
     PrefixSuffix(prefix_suffix...)
 end
 
-ensure_set(x::JobName) = Set{JobName}(x)
-ensure_set(xs) = Set{JobName}(xs...)
+ensure_array(x::JobName) = JobName[x]
+ensure_array(xs) = JobName[xs...]
 
 need_update(name::Number, dep::Number) = name < dep
 need_update(name::Symbol, dep::Symbol) = true
