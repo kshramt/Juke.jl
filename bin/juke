@@ -5,7 +5,7 @@ finish, job, rule = Juke.new_dsl()
 
 function main()
     dir = pwd()
-    juke_files = split("Jukefile")
+    juke_files = split("Jukefile jukefile Jukefile.jl jukefile.jl")
     for f in juke_files
         path = joinpath(dir, f)
         if isfile(path)
