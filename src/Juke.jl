@@ -250,8 +250,6 @@ function need_update(name, deps)
     end
 end
 
-str(name::String) = name
-str(name::Symbol) = ":$name"
-str(x) = repr(x)
+const str = repr
 
 end
