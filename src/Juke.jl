@@ -35,6 +35,11 @@ type PrefixSuffix
     suffix::String
 end
 
+function sh(cmds::Base.AbstractCmd, args...)
+    println(cmds)
+    run(cmds)
+end
+
 function new_dsl()
     # Environment
     name_graph = empty_name_graph()
