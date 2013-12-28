@@ -14,7 +14,7 @@ function main()
             return
         end
     end
-    Juke.error("None of following files are found: $(join(juke_files, ", "))")
+    Juke.error("None of following files were found: $(join(juke_files, ", "))")
 end
 
 main()

@@ -146,7 +146,7 @@ function new_dsl()
                     union!(additional_names, deps)
                 end
             else
-                error("No job or rule for $(str(name))")
+                error("No rule for $(str(name))")
             end
         end
         resolve_all(additional_names)
