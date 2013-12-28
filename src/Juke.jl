@@ -65,7 +65,7 @@ function new_dsl()
         _job(command, name, deps)
     end
     job(command::Function, name::Symbol, deps) = _job(command, name, deps)
-    job(command::Function, names, deps) = for name in names
+    job(command::Function, names, deps) = for name in unique(names)
         if isa(name, Symbol)
             error("Command job is not allowed in a multiple job declaration")
         end
@@ -111,7 +111,7 @@ function new_dsl()
     rule(command, name::String, dep::String) = rule(command, name, (dep,))
     rule(command, name::String, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
     rule(command, names, dep::String) = rule(command, names, (dep,))
-    rule(command, names, deps) = for name in names
+    rule(command, names, deps) = for name in unique(names)
         rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
     end
 

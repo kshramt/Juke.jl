@@ -31,3 +31,16 @@ let
                                      "b.F90"=>[],
                                      ]
 end
+
+let
+    finish, job, rule, internals = Juke.new_dsl()
+
+    job(_->nothing, :default, "c.exe")
+    job(_->nothing, ("c.exe", "c.exe"), "c.o")
+
+    internals[:resolve_all](Set())
+    @test internals[:name_graph] == [:default=>["c.exe"],
+                                     "c.exe"=>["c.o"],
+                                     "c.o"=>[],
+                                     ]
+end
