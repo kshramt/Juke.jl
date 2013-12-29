@@ -37,7 +37,7 @@ end
 
 function sh(cmds::Base.AbstractCmd, args...)
     println(cmds)
-    run(cmds)
+    run(cmds, args...)
 end
 
 function new_dsl()
