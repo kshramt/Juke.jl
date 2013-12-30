@@ -1,5 +1,7 @@
 module Juke
 
+import ArgParse
+
 macro p(ex)
     quote
         let ret=$(esc(ex))
@@ -8,6 +10,8 @@ macro p(ex)
         end
     end
 end
+
+const JUKEFILE_NAMES = split("Jukefile jukefile Jukefile.jl jukefile.jl")
 
 type Error <: Exception
     msg::String
@@ -117,7 +121,7 @@ function new_dsl()
 
     finish() = finish(:default)
     finish(name::JobName) = finish((name,))
-    finish(names) = _finish(names)
+    finish(names) = _finish(unique(names))
 
     function _finish(names)
         resolve_all(names)
@@ -248,6 +252,30 @@ function need_update(name, deps)
             need_update(name, dep)
         end
     end
+end
+
+function parse_args(args)
+    aps = ArgParse.ArgParseSettings("Finish jobs in a Jukefile. Command job name should start with ':' (e.g. `juke :test`).")
+    ArgParse.@add_arg_table aps begin
+        "names"
+        help="names of jobs to be finished"
+        nargs='*'
+    end
+    ArgParse.parse_args(args, aps)
+end
+
+function parse_names(names)
+    ret = JobName[]
+    for name in names
+        if beginswith(name, ':')
+            name = symbol(name[2:])
+        end
+        push!(ret, name)
+    end
+    if length(ret) == 0
+        push!(ret, :default)
+    end
+    ret
 end
 
 const str = repr

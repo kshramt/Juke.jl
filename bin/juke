@@ -3,18 +3,18 @@
 import Juke: sh
 finish, job, rule = Juke.new_dsl()
 
-function main()
+function main(args)
+    parsed_args = Juke.parse_args(args)
     dir = pwd()
-    juke_files = split("Jukefile jukefile Jukefile.jl jukefile.jl")
-    for f in juke_files
+    for f in Juke.JUKEFILE_NAMES
         path = joinpath(dir, f)
         if isfile(path)
             include(path)
-            finish()
+            finish(Juke.parse_names(parsed_args["names"]))
             return
         end
     end
-    Juke.error("None of following files were found: $(join(juke_files, ", "))")
+    Juke.error("None of following files were found: $(join(Juke.JUKEFILE_NAMES, ", "))")
 end
 
-main()
+main(ARGS)
