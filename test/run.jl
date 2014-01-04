@@ -4,17 +4,19 @@ import Base.Test: @test
 unshift!(LOAD_PATH, joinpath(dirname(@__FILE__), "..", "src"))
 import Juke
 
+_n = _->nothing
+
 let
     finish, job, rule, internals = Juke.new_dsl()
 
-    job(_->nothing, :default, (:a, :b))
-    job(_->nothing, :a, :c)
-    job(_->nothing, :c)
-    job(_->nothing, :b, (:e, :f))
-    job(_->nothing, :e)
-    job(_->nothing, :f, ("a.exe", "b.exe", "a.exe"))
-    rule(_->nothing, "*.exe", "*.o")
-    rule(_->nothing, ("*.o", "*.mod", "*.o"), "*.F90")
+    job(_n, :default, (:a, :b))
+    job(_n, :a, :c)
+    job(_n, :c)
+    job(_n, :b, (:e, :f))
+    job(_n, :e)
+    job(_n, :f, ("a.exe", "b.exe", "a.exe"))
+    rule(_n, "*.exe", "*.o")
+    rule(_n, ("*.o", "*.mod", "*.o"), "*.F90")
 
     internals[:resolve_all](Set())
     @test internals[:name_graph] == [:default=>[:a, :b],
@@ -35,8 +37,8 @@ end
 let
     finish, job, rule, internals = Juke.new_dsl()
 
-    job(_->nothing, :default, "c.exe")
-    job(_->nothing, ("c.exe", "c.exe"), "c.o")
+    job(_n, :default, "c.exe")
+    job(_n, ("c.exe", "c.exe"), "c.o")
 
     internals[:resolve_all](Set())
     @test internals[:name_graph] == [:default=>["c.exe"],
