@@ -1,10 +1,17 @@
-import Base.Test: @test
+import Base.Test: @test, @test_throws
 
 # Just in a case where `Juke` is not in `~/.julia`
 unshift!(LOAD_PATH, joinpath(dirname(@__FILE__), "..", "src"))
 import Juke
 
 _n = _->nothing
+
+let
+    finish, job, rule, internals = Juke.new_dsl()
+    job(_n, :default, "not_exist.html")
+    rule(_n, "*.html", "*.md")
+    @test_throws internals[:resolve_all](Set())
+end
 
 let
     finish, job, rule, internals = Juke.new_dsl()
