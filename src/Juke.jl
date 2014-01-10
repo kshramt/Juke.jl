@@ -34,7 +34,7 @@ type JobInfo
     deps::Array{JobName, 1}
 end
 
-type PrefixSuffix
+immutable PrefixSuffix
     prefix::String
     suffix::String
 end
