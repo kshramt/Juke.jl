@@ -268,7 +268,7 @@ function parse_names(names)
     ret = JobName[]
     for name in names
         if beginswith(name, ':')
-            name = symbol(name[2:])
+            name = symbol(name[2:end])
         end
         push!(ret, name)
     end
