@@ -6,7 +6,8 @@ finish, job, rule = Juke.new_dsl()
 function main(args)
     parsed_args = Juke.parse_args(args)
     dir = pwd()
-    for f in Juke.JUKEFILE_NAMES
+    jukefiles = parsed_args["file"]
+    for f in jukefiles
         path = joinpath(dir, f)
         if isfile(path)
             include(path)
@@ -14,7 +15,7 @@ function main(args)
             return
         end
     end
-    Juke.error("None of following files were found: $(join(Juke.JUKEFILE_NAMES, ", "))")
+    Juke.error("None of following files were found: $(join(jukefiles, ", "))")
 end
 
 main(ARGS)

@@ -260,6 +260,11 @@ function parse_args(args)
         "names"
         help="names of jobs to be finished"
         nargs='*'
+        "--file", "-f"
+        help="use FILE as a Jukefile"
+        arg_type=String
+        default=JUKEFILE_NAMES
+        nargs=1
     end
     ArgParse.parse_args(args, aps)
 end
