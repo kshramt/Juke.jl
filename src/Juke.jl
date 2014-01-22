@@ -55,7 +55,7 @@ function new_dsl()
     # DSL
     job(name::Symbol, dep::JobName) = job(name, (dep,))
     job(name::Symbol, deps) = job(_->nothing, name, deps)
-    job(name::String, deps) = error("File job $(str(name)) should have command")
+    job(name::String, deps) = error("File job $(repr(name)) should have command")
     job(command::Function, name::JobName) = job(command, name, ())
     job(command::Function, names) = job(command, names, ())
     job(command::Function, name::Symbol, dep::JobName) = job(command, name, (dep,))
@@ -63,7 +63,7 @@ function new_dsl()
     function job(command::Function, name::String, deps)
         for dep in deps
             if isa(dep, Symbol)
-                error("File job $(str(name)) should not depend on a command job $(str(dep)) in $(str(deps))")
+                error("File job $(repr(name)) should not depend on a command job $(repr(dep)) in $(repr(deps))")
             end
         end
         _job(command, name, deps)
@@ -78,7 +78,7 @@ function new_dsl()
 
     function _job(command::Function, name::JobName, deps)
         if haskey(name_graph, name)
-            error("Overriding job declarations for $(str(name))")
+            error("Overriding job declarations for $(repr(name))")
         end
         name_to_job[name] = Job(command, name)
         name_graph[name] = JobName[deps...]
@@ -88,14 +88,14 @@ function new_dsl()
         push!(rules, (command, match_fn, name->ensure_array(deps_fn(name))))
     function rule(command, r::Regex, deps_fn::Function)
         if r in rules_regex
-            error("Overriding rule declarations for $(str(r))")
+            error("Overriding rule declarations for $(repr(r))")
         end
         push!(rules_regex, r)
         rule(command, name->(match(r, name) !== nothing), name->deps_fn(match(r, name)))
     end
     function rule(command, prefix_suffix::PrefixSuffix, deps_fn::Function)
         if prefix_suffix in rules_prefix_suffix
-            error("Overriding rule declarations for $(str(prefix_suffix))")
+            error("Overriding rule declarations for $(repr(prefix_suffix))")
         end
         push!(rules_prefix_suffix, prefix_suffix)
         prefix = prefix_suffix.prefix
@@ -140,7 +140,7 @@ function new_dsl()
         additional_names = Set{JobName}()
         for name in undeclared_job_names
             if isa(name, Symbol)
-                error("Undeclared command job: $(str(name))")
+                error("Undeclared command job: $(repr(name))")
             end
 
             found, new_name_graph, new_name_to_command = resolve(name, rules, Set{JobName}(keys(name_to_job)...))
@@ -150,7 +150,7 @@ function new_dsl()
                     union!(additional_names, deps)
                 end
             else
-                error("No rule for $(str(name))")
+                error("No rule for $(repr(name))")
             end
         end
         resolve_all(additional_names)
@@ -188,7 +188,7 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
     elseif name in goals
         return true, empty_name_graph(), empty_name_to_command()
     elseif ispath(name)
-        return true, [name=>JobName[]], [name=>j->error("No command to create $(str(j.name))")]
+        return true, [name=>JobName[]], [name=>j->error("No command to create $(repr(j.name))")]
     end
 
     new_parent_names = union(parent_names, Set(name))
@@ -225,7 +225,7 @@ empty_name_to_command() = Dict{JobName, Function}()
 function get_prefix_suffix(s)
     prefix_suffix = split(s, '*')
     if !(length(prefix_suffix) == 2)
-        error("Multiple stem is not allowed: $(str(s))")
+        error("Multiple stem is not allowed: $(repr(s))")
     end
     PrefixSuffix(prefix_suffix...)
 end
@@ -284,7 +284,5 @@ function parse_names(names)
     end
     ret
 end
-
-const str = repr
 
 end
