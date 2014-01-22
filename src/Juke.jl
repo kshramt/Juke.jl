@@ -257,7 +257,7 @@ end
 function parse_args(args)
     aps = ArgParse.ArgParseSettings("Finish jobs in a Jukefile. Command job name should start with ':' (e.g. `juke :test`).")
     ArgParse.@add_arg_table aps begin
-        "names"
+        "targets"
         help="names of jobs to be finished"
         nargs='*'
         "--file", "-f"
@@ -267,7 +267,7 @@ function parse_args(args)
         nargs=1
     end
     parsed_args = ArgParse.parse_args(args, aps)
-    parsed_args["names"] = parse_names(parsed_args["names"])
+    parsed_args["targets"] = parse_names(parsed_args["targets"])
     parsed_args
 end
 
