@@ -11,7 +11,7 @@ function main(args)
         path = joinpath(dir, f)
         if isfile(path)
             include(path)
-            finish(Juke.parse_names(parsed_args["names"]))
+            finish(parsed_args["name"])
             return
         end
     end

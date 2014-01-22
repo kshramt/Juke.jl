@@ -266,7 +266,9 @@ function parse_args(args)
         default=JUKEFILE_NAMES
         nargs=1
     end
-    ArgParse.parse_args(args, aps)
+    parsed_args = ArgParse.parse_args(args, aps)
+    parsed_args["names"] = parse_names(parsed_args["names"])
+    parsed_args
 end
 
 function parse_names(names)
