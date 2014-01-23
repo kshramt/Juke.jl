@@ -56,8 +56,6 @@ function new_dsl()
     job(name::Symbol, dep::JobName) = job(name, (dep,))
     job(name::Symbol, deps) = job(_->nothing, name, deps)
     job(name::String, deps) = error("File job $(repr(name)) should have command")
-    job(command::Function, name::JobName) = job(command, name, ())
-    job(command::Function, names) = job(command, names, ())
     job(command::Function, name::Symbol, dep::JobName) = job(command, name, (dep,))
     job(command::Function, name::String, dep::JobName) = job(command, name, (dep,))
     function job(command::Function, name::String, deps)
@@ -68,8 +66,8 @@ function new_dsl()
         end
         _job(command, name, deps)
     end
-    job(command::Function, name::Symbol, deps) = _job(command, name, deps)
-    job(command::Function, names, deps) = for name in unique(names)
+    job(command::Function, name::Symbol, deps=()) = _job(command, name, deps)
+    job(command::Function, names, deps=()) = for name in unique(names)
         if isa(name, Symbol)
             error("Command job is not allowed in a multiple job declaration")
         end
@@ -119,8 +117,7 @@ function new_dsl()
         rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
     end
 
-    finish() = finish(:default)
-    finish(name::JobName) = finish((name,))
+    finish(name::JobName=:default) = finish((name,))
     finish(names) = _finish(unique(names))
 
     function _finish(names)
