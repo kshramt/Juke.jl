@@ -216,8 +216,8 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
     false, empty_name_graph(), empty_name_to_command()
 end
 
-empty_name_graph() = Dict{JobName, Array{JobName, 1}}()
-empty_name_to_command() = Dict{JobName, Function}()
+const empty_name_graph = Dict{JobName, Array{JobName, 1}}
+const empty_name_to_command = Dict{JobName, Function}
 
 function get_prefix_suffix(s)
     prefix_suffix = split(s, '*')
