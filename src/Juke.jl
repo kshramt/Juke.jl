@@ -230,13 +230,12 @@ end
 ensure_array(x::JobName) = JobName[x]
 ensure_array(xs) = JobName[xs...]
 
-need_update(name::Number, dep::Number) = name < dep
 need_update(name::Symbol, dep::Symbol) = true
 need_update(name::Symbol, dep) = true
 need_update(name, dep::Symbol) = true
 function need_update(name::String, dep::String)
     if ispath(name) && ispath(dep)
-        need_update(mtime(name), mtime(dep))
+        mtime(name) < mtime(dep)
     else
         true
     end
