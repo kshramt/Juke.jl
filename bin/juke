@@ -11,7 +11,7 @@ function main(args)
         path = joinpath(dir, f)
         if isfile(path)
             include(path)
-            finish(parsed_args["targets"])
+            finish(parsed_args["targets"], parsed_args["print_dependencies"])
             return
         end
     end

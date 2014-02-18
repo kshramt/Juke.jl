@@ -44,6 +44,15 @@ function sh(cmds::Base.AbstractCmd, args...)
     run(cmds, args...)
 end
 
+function print_deps(d::Dict)
+    for (target, deps) in d
+        println(target)
+        for dep in deps
+            println('\t', repr(dep))
+        end
+    end
+end
+
 function new_dsl()
     # Environment
     name_graph = empty_name_graph()
@@ -117,12 +126,16 @@ function new_dsl()
         rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
     end
 
-    finish(name::JobName=:default) = finish((name,))
-    finish(names) = _finish(unique(names))
+    finish(name::JobName=:default, print_dependencies=false) = finish((name,), print_dependencies)
+    finish(names, print_dependencies=false) = _finish(unique(names), print_dependencies)
 
-    function _finish(names)
+    function _finish(names, print_dependencies)
         resolve_all(names)
-        finish_recur(names)
+        if print_dependencies
+            print_deps(name_graph)
+        else
+            finish_recur(names)
+        end
     end
 
     function resolve_all(invoked_names)
@@ -261,6 +274,9 @@ function parse_args(args)
         arg_type=String
         default=JUKEFILE_NAMES
         nargs=1
+        "--print_dependencies", "-P"
+        help="print dependencies"
+        action=:store_true
     end
     parsed_args = ArgParse.parse_args(args, aps)
     parsed_args["targets"] = parse_names(parsed_args["targets"])
