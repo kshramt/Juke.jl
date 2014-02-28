@@ -234,7 +234,7 @@ const empty_name_to_command = Dict{JobName, Function}
 
 function get_prefix_suffix(s)
     prefix_suffix = split(s, '*')
-    if !(length(prefix_suffix) == 2)
+    if length(prefix_suffix) != 2
         error("Multiple stem is not allowed: $(repr(s))")
     end
     PrefixSuffix(prefix_suffix...)
