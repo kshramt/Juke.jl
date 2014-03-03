@@ -140,8 +140,8 @@ function new_dsl()
 
     function resolve_all(invoked_names)
         undeclared_job_names = setdiff(union(union(values(name_graph)...),
-                                             Set{JobName}(invoked_names...)),
-                                       Set{JobName}(keys(name_graph)...))
+                                             Set{JobName}(invoked_names)),
+                                       Set{JobName}(keys(name_graph)))
 
         if length(undeclared_job_names) == 0
             return nothing
@@ -153,7 +153,7 @@ function new_dsl()
                 error("Undeclared command job: $(repr(name))")
             end
 
-            found, new_name_graph, new_name_to_command = resolve(name, rules, Set{JobName}(keys(name_to_job)...))
+            found, new_name_graph, new_name_to_command = resolve(name, rules, Set{JobName}(keys(name_to_job)))
             if found
                 for (new_name, deps) in new_name_graph
                     job(new_name_to_command[new_name], new_name, deps)
@@ -215,7 +215,7 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
                 if ok_
                     merge!(new_name_graph, n_n_g)
                     merge!(new_name_to_command, n_n_t_c)
-                    union!(new_goals, Set(keys(n_n_t_c)...))
+                    union!(new_goals, Set(keys(n_n_t_c)))
                 else
                     ok = false
                     break
