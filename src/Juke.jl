@@ -46,7 +46,7 @@ end
 
 function print_deps(d::Dict)
     for (target, deps) in d
-        println(target)
+        println(repr(target))
         for dep in deps
             println('\t', repr(dep))
         end
