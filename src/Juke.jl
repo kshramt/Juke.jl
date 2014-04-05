@@ -39,9 +39,18 @@ immutable PrefixSuffix
     suffix::String
 end
 
-function sh(cmds::Base.AbstractCmd, args...)
-    println(cmds)
-    run(cmds, args...)
+function info(x)
+    println(x)
+end
+
+function cd(f::Function, d::String)
+    info("cd $(d)")
+    Base.cd(f, d)
+end
+
+function run(cmds::Base.AbstractCmd, args...)
+    info(cmds)
+    Base.run(cmds, args...)
 end
 
 function print_deps(d::Dict)

@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
 
-import Juke: sh
+import Juke: run, cd
 finish, job, rule = Juke.new_dsl()
 
 function main(args)

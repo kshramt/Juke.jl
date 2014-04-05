@@ -2,6 +2,6 @@ job(:default, :test)
 
 job(:test) do j
     cd("test") do
-        sh(`julia run.jl`)
+        run(`julia run.jl`)
     end
 end
