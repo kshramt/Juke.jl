@@ -10,7 +10,7 @@ let
     finish, job, rule, internals = Juke.new_dsl()
     job(_n, :default, "not_exist.html")
     rule(_n, "*.html", "*.md")
-    @test_throws internals[:resolve_all](Set())
+    @test_throws Juke.Error internals[:resolve_all](Set())
 end
 
 let
@@ -26,19 +26,20 @@ let
     rule(_n, ("*.o", "*.mod", "*.o"), "*.F90")
 
     internals[:resolve_all](Set())
-    @test internals[:name_graph] == [:default=>[:a, :b],
-                                     :a=>[:c],
-                                     :c=>[],
-                                     :b=>[:e, :f],
-                                     :e=>[],
-                                     :f=>["a.exe", "b.exe", "a.exe"],
-                                     "a.exe"=>["a.o"],
-                                     "b.exe"=>["b.o"],
-                                     "a.o"=>["a.F90"],
-                                     "b.o"=>["b.F90"],
-                                     "a.F90"=>[],
-                                     "b.F90"=>[],
-                                     ]
+    @test internals[:name_graph] == Dict(
+                                         :default=>[:a, :b],
+                                         :a=>[:c],
+                                         :c=>[],
+                                         :b=>[:e, :f],
+                                         :e=>[],
+                                         :f=>["a.exe", "b.exe", "a.exe"],
+                                         "a.exe"=>["a.o"],
+                                         "b.exe"=>["b.o"],
+                                         "a.o"=>["a.F90"],
+                                         "b.o"=>["b.F90"],
+                                         "a.F90"=>[],
+                                         "b.F90"=>[],
+                                         )
 end
 
 let
@@ -48,8 +49,9 @@ let
     job(_n, ("c.exe", "c.exe"), "c.o")
 
     internals[:resolve_all](Set())
-    @test internals[:name_graph] == [:default=>["c.exe"],
-                                     "c.exe"=>["c.o"],
-                                     "c.o"=>[],
-                                     ]
+    @test internals[:name_graph] == Dict(
+                                         :default=>["c.exe"],
+                                         "c.exe"=>["c.o"],
+                                         "c.o"=>[],
+                                         )
 end

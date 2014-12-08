@@ -19,6 +19,7 @@ end
 error(s::String) = throw(Error(s))
 error(s...) = error(string(s...))
 Base.showerror(io::IO, e::Error) = print(io, e.msg)
+#showerror(io::IO, e::Error) = print(io, e.msg)
 
 typealias JobName Union(String, Symbol)
 
@@ -195,9 +196,11 @@ function new_dsl()
 
     # Export
     finish, job, rule,
-    [:name_graph=>name_graph,
-     :name_to_job=>name_to_job,
-     :resolve_all=>resolve_all]
+    Dict(
+         :name_graph=>name_graph,
+         :name_to_job=>name_to_job,
+         :resolve_all=>resolve_all
+         )
 end
 
 function resolve(name::String, rules::Set{(Function, Function, Function)},
@@ -207,15 +210,15 @@ function resolve(name::String, rules::Set{(Function, Function, Function)},
     elseif name in goals
         return true, empty_name_graph(), empty_name_to_command()
     elseif ispath(name)
-        return true, [name=>JobName[]], [name=>j->error("No command to create $(repr(j.name))")]
+        return true, Dict(name=>JobName[]), Dict(name=>j->error("No command to create $(repr(j.name))"))
     end
 
     new_parent_names = union(parent_names, Set(name))
     for (command, match_fn, deps_fn) in rules
         if match_fn(name)
             deps = deps_fn(name)
-            new_name_graph = [name=>deps]
-            new_name_to_command = [name=>command]
+            new_name_graph = Dict(name=>deps)
+            new_name_to_command = Dict(name=>command)
             new_goals = copy(goals)
             ok = true
             for dep in deps
