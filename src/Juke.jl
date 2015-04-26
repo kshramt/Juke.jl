@@ -14,9 +14,9 @@ end
 const JUKEFILE_NAMES = split("Jukefile jukefile Jukefile.jl jukefile.jl")
 
 type Error <: Exception
-    msg::String
+    msg::AbstractString
 end
-error(s::String) = throw(Error(s))
+error(s::AbstractString) = throw(Error(s))
 error(s...) = error(string(s...))
 Base.showerror(io::IO, e::Error) = print(io, e.msg)
 #showerror(io::IO, e::Error) = print(io, e.msg)
@@ -36,15 +36,15 @@ type JobInfo
 end
 
 immutable PrefixSuffix
-    prefix::String
-    suffix::String
+    prefix::AbstractString
+    suffix::AbstractString
 end
 
 function info(x)
     println(x)
 end
 
-function cd(f::Function, d::String)
+function cd(f::Function, d::AbstractString)
     info("cd $(d)")
     Base.cd(f, d)
 end
@@ -74,10 +74,10 @@ function new_dsl()
     # DSL
     job(name::Symbol, dep::JobName) = job(name, (dep,))
     job(name::Symbol, deps) = job(_->nothing, name, deps)
-    job(name::String, deps) = error("File job $(repr(name)) should have command")
+    job(name::AbstractString, deps) = error("File job $(repr(name)) should have command")
     job(command::Function, name::Symbol, dep::JobName) = job(command, name, (dep,))
-    job(command::Function, name::String, dep::JobName) = job(command, name, (dep,))
-    function job(command::Function, name::String, deps)
+    job(command::Function, name::AbstractString, dep::JobName) = job(command, name, (dep,))
+    function job(command::Function, name::AbstractString, deps)
         for dep in deps
             if isa(dep, Symbol)
                 error("File job $(repr(name)) should not depend on a command job $(repr(dep)) in $(repr(deps))")
@@ -124,14 +124,14 @@ function new_dsl()
     end
     rule(command, prefix_suffix::PrefixSuffix, dep_prefix_suffix::PrefixSuffix) =
         rule(command, prefix_suffix, (dep_prefix_suffix,))
-    rule(command, prefix_suffix::PrefixSuffix, dep::String) =
+    rule(command, prefix_suffix::PrefixSuffix, dep::AbstractString) =
         rule(command, prefixsuffix, get_prefix_suffix(dep))
     rule(command, prefix_suffix::PrefixSuffix, deps_prefix_suffix) =
         rule(command, prefix_suffix, stem->map(d_p_s->"$(d_p_s.prefix)$stem$(d_p_s.suffix)",
                                                deps_prefix_suffix))
-    rule(command, name::String, dep::String) = rule(command, name, (dep,))
-    rule(command, name::String, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
-    rule(command, names, dep::String) = rule(command, names, (dep,))
+    rule(command, name::AbstractString, dep::AbstractString) = rule(command, name, (dep,))
+    rule(command, name::AbstractString, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
+    rule(command, names, dep::AbstractString) = rule(command, names, (dep,))
     rule(command, names, deps) = for name in unique(names)
         rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
     end
@@ -203,7 +203,7 @@ function new_dsl()
          )
 end
 
-function resolve(name::String, rules::Set{Tuple{Function, Function, Function}},
+function resolve(name::AbstractString, rules::Set{Tuple{Function, Function, Function}},
                  goals::Set{JobName}, parent_names=Set{JobName}())
     if name in parent_names
         return false, empty_name_graph(), empty_name_to_command()
@@ -245,7 +245,9 @@ const empty_name_graph = Dict{JobName, Array{JobName, 1}}
 const empty_name_to_command = Dict{JobName, Function}
 
 function get_prefix_suffix(s)
+    println(s)
     prefix_suffix = split(s, '*')
+    println(prefix_suffix)
     if length(prefix_suffix) != 2
         error("Multiple stem is not allowed: $(repr(s))")
     end
@@ -258,7 +260,7 @@ ensure_array(xs) = JobName[xs...]
 need_update(name::Symbol, dep::Symbol) = true
 need_update(name::Symbol, dep) = true
 need_update(name, dep::Symbol) = true
-function need_update(name::String, dep::String)
+function need_update(name::AbstractString, dep::AbstractString)
     if ispath(name) && ispath(dep)
         mtime(name) < mtime(dep)
     else
