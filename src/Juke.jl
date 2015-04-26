@@ -119,7 +119,7 @@ function new_dsl()
         suffix = prefix_suffix.suffix
         len_prefix = length(prefix)
         len_suffix = length(suffix)
-        rule(command, name->beginswith(name, prefix) && endswith(name, suffix),
+        rule(command, name->startswith(name, prefix) && endswith(name, suffix),
              name->deps_fn(name[1+len_prefix:end-len_suffix]))
     end
     rule(command, prefix_suffix::PrefixSuffix, dep_prefix_suffix::PrefixSuffix) =
@@ -298,7 +298,7 @@ end
 function parse_names(names)
     ret = JobName[]
     for name in names
-        if beginswith(name, ':')
+        if startswith(name, ':')
             name = symbol(name[2:end])
         end
         push!(ret, name)
