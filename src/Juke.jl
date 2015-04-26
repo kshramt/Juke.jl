@@ -67,7 +67,7 @@ function new_dsl()
     # Environment
     name_graph = empty_name_graph()
     name_to_job = Dict{JobName, Job}()
-    rules = Set{(Function, Function, Function)}()
+    rules = Set{Tuple{Function, Function, Function}}()
     rules_regex = Set{Regex}()
     rules_prefix_suffix = Set{PrefixSuffix}()
 
@@ -203,7 +203,7 @@ function new_dsl()
          )
 end
 
-function resolve(name::String, rules::Set{(Function, Function, Function)},
+function resolve(name::String, rules::Set{Tuple{Function, Function, Function}},
                  goals::Set{JobName}, parent_names=Set{JobName}())
     if name in parent_names
         return false, empty_name_graph(), empty_name_to_command()
