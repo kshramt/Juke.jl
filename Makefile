@@ -7,12 +7,13 @@
 export SHELL := /bin/bash
 export SHELLOPTS := pipefail:errexit:nounset:noclobber
 
+JULIA := julia
+
 # Tasks
 .PHONY: all test
 all: test
 test:
-	cd test
-	julia run.jl
+	$(JULIA) bin/juke
 
 # Files
 
