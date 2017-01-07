@@ -26,11 +26,6 @@ type JobInfo
     deps::Array{JobName, 1}
 end
 
-immutable PrefixSuffix
-    prefix::AbstractString
-    suffix::AbstractString
-end
-
 function cd(f::Function, d::AbstractString)
     info("cd $(d)")
     Base.cd(f, d)
@@ -54,9 +49,6 @@ function new_dsl()
     # Environment
     name_graph = empty_name_graph()
     name_to_job = Dict{JobName, Job}()
-    rules = Set{Tuple{Function, Function, Function}}()
-    rules_regex = Set{Regex}()
-    rules_prefix_suffix = Set{PrefixSuffix}()
 
     # DSL
     job(name::Symbol, dep::JobName) = job(name, (dep,))
@@ -88,46 +80,11 @@ function new_dsl()
         name_graph[name] = JobName[deps...]
     end
 
-    rule(command::Function, match_fn::Function, deps_fn::Function) =
-        push!(rules, (command, match_fn, name->ensure_array(deps_fn(name))))
-    function rule(command, r::Regex, deps_fn::Function)
-        if r in rules_regex
-            error("Overriding rule declarations for $(repr(r))")
-        end
-        push!(rules_regex, r)
-        rule(command, name->(match(r, name) !== nothing), name->deps_fn(match(r, name)))
-    end
-    function rule(command, prefix_suffix::PrefixSuffix, deps_fn::Function)
-        if prefix_suffix in rules_prefix_suffix
-            error("Overriding rule declarations for $(repr(prefix_suffix))")
-        end
-        push!(rules_prefix_suffix, prefix_suffix)
-        prefix = prefix_suffix.prefix
-        suffix = prefix_suffix.suffix
-        len_prefix = length(prefix)
-        len_suffix = length(suffix)
-        rule(command, name->startswith(name, prefix) && endswith(name, suffix),
-             name->deps_fn(name[1+len_prefix:end-len_suffix]))
-    end
-    rule(command, prefix_suffix::PrefixSuffix, dep_prefix_suffix::PrefixSuffix) =
-        rule(command, prefix_suffix, (dep_prefix_suffix,))
-    rule(command, prefix_suffix::PrefixSuffix, dep::AbstractString) =
-        rule(command, prefixsuffix, get_prefix_suffix(dep))
-    rule(command, prefix_suffix::PrefixSuffix, deps_prefix_suffix) =
-        rule(command, prefix_suffix, stem->map(d_p_s->"$(d_p_s.prefix)$stem$(d_p_s.suffix)",
-                                               deps_prefix_suffix))
-    rule(command, name::AbstractString, dep::AbstractString) = rule(command, name, (dep,))
-    rule(command, name::AbstractString, deps) = rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
-    rule(command, names, dep::AbstractString) = rule(command, names, (dep,))
-    rule(command, names, deps) = for name in unique(names)
-        rule(command, get_prefix_suffix(name), map(get_prefix_suffix, deps))
-    end
-
     finish(name::JobName=:default, print_dependencies=false) = finish((name,), print_dependencies)
     finish(names, print_dependencies=false) = _finish(unique(names), print_dependencies)
 
     function _finish(names, print_dependencies)
-        resolve_all(names)
+        resolve(names)
         if print_dependencies
             print_deps(name_graph)
         else
@@ -135,32 +92,29 @@ function new_dsl()
         end
     end
 
-    function resolve_all(invoked_names)
-        undeclared_job_names = setdiff(union(union(values(name_graph)...),
-                                             Set{JobName}(invoked_names)),
-                                       Set{JobName}(keys(name_graph)))
-
+    function resolve(invoked_names)
+        undeclared_job_names = setdiff(
+            union(
+                union(values(name_graph)...),
+                Set{JobName}(invoked_names),
+            ),
+            Set{JobName}(keys(name_graph)),
+        )
         if length(undeclared_job_names) == 0
             return nothing
         end
 
-        additional_names = Set{JobName}()
         for name in undeclared_job_names
             if isa(name, Symbol)
                 error("Undeclared command job: $(repr(name))")
-            end
-
-            found, new_name_graph, new_name_to_command = resolve(name, rules, Set{JobName}(keys(name_to_job)))
-            if found
-                for (new_name, deps) in new_name_graph
-                    job(new_name_to_command[new_name], new_name, deps)
-                    union!(additional_names, deps)
+            elseif ispath(name)
+                job(name, JobName[]) do j
+                    error("No command to create $(repr(j.name))")
                 end
             else
                 error("No rule for $(repr(name))")
             end
         end
-        resolve_all(additional_names)
     end
 
     function finish_recur(name::JobName)
@@ -182,67 +136,15 @@ function new_dsl()
     end
 
     # Export
-    finish, job, rule,
+    finish, job,
     Dict(
          :name_graph=>name_graph,
          :name_to_job=>name_to_job,
-         :resolve_all=>resolve_all
+         :resolve=>resolve
          )
 end
 
-function resolve(name::AbstractString, rules::Set{Tuple{Function, Function, Function}},
-                 goals::Set{JobName}, parent_names=Set{JobName}())
-    if name in parent_names
-        return false, empty_name_graph(), empty_name_to_command()
-    elseif name in goals
-        return true, empty_name_graph(), empty_name_to_command()
-    elseif ispath(name)
-        return true, Dict(name=>JobName[]), Dict(name=>j->error("No command to create $(repr(j.name))"))
-    end
-
-    new_parent_names = union(parent_names, Set(name))
-    for (command, match_fn, deps_fn) in rules
-        if match_fn(name)
-            deps = deps_fn(name)
-            new_name_graph = Dict(name=>deps)
-            new_name_to_command = Dict{JobName, Function}(name=>command)
-            new_goals = copy(goals)
-            ok = true
-            for dep in deps
-                ok_, n_n_g, n_n_t_c = resolve(dep, rules, new_goals,
-                                              new_parent_names)
-                if ok_
-                    merge!(new_name_graph, n_n_g)
-                    merge!(new_name_to_command, n_n_t_c)
-                    union!(new_goals, Set(keys(n_n_t_c)))
-                else
-                    ok = false
-                    break
-                end
-            end
-            if ok
-                return true, new_name_graph, new_name_to_command
-            end
-        end
-    end
-    false, empty_name_graph(), empty_name_to_command()
-end
-
 const empty_name_graph = Dict{JobName, Array{JobName, 1}}
-const empty_name_to_command = Dict{JobName, Function}
-
-function get_prefix_suffix(s)
-    println(s)
-    prefix_suffix = split(s, '*')
-    println(prefix_suffix)
-    if length(prefix_suffix) != 2
-        error("Multiple stem is not allowed: $(repr(s))")
-    end
-    PrefixSuffix(prefix_suffix...)
-end
-
-ensure_array(x::JobName) = JobName[x]
-ensure_array(xs) = JobName[xs...]
 
 need_update(name::Symbol, dep::Symbol) = true
 need_update(name::Symbol, dep) = true

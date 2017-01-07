@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 
 import Juke: run, cd
-finish, job, rule = Juke.new_dsl()
+finish, job = Juke.new_dsl()
 
 function main(args)
     parsed_args = Juke.parse_args(args)
