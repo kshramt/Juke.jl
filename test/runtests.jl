@@ -1,7 +1,6 @@
 import Base.Test: @test, @test_throws
 
 # Just in a case where `Juke` is not in `~/.julia`
-unshift!(LOAD_PATH, joinpath(dirname(@__FILE__), "..", "src"))
 import Juke
 
 _n = _->nothing
