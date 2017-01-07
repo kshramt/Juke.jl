@@ -21,7 +21,7 @@ error(s...) = error(string(s...))
 Base.showerror(io::IO, e::Error) = print(io, e.msg)
 #showerror(io::IO, e::Error) = print(io, e.msg)
 
-typealias JobName Union(String, Symbol)
+typealias JobName Union{String, Symbol}
 
 type Job
     command::Function
