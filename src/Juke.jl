@@ -218,7 +218,7 @@ function resolve(name::AbstractString, rules::Set{Tuple{Function, Function, Func
         if match_fn(name)
             deps = deps_fn(name)
             new_name_graph = Dict(name=>deps)
-            new_name_to_command = Dict(name=>command)
+            new_name_to_command = Dict{JobName, Function}(name=>command)
             new_goals = copy(goals)
             ok = true
             for dep in deps
