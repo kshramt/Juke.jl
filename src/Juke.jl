@@ -2,15 +2,6 @@ module Juke
 
 import ArgParse
 
-macro p(ex)
-    quote
-        let ret=$(esc(ex))
-            println($(string(ex)), ":\n", ret, "\n")
-            ret
-        end
-    end
-end
-
 const JUKEFILE_NAME = "juke.jl"
 
 type Error <: Exception
@@ -38,10 +29,6 @@ end
 immutable PrefixSuffix
     prefix::AbstractString
     suffix::AbstractString
-end
-
-function info(x)
-    println(x)
 end
 
 function cd(f::Function, d::AbstractString)
