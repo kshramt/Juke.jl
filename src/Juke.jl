@@ -11,7 +11,7 @@ macro p(ex)
     end
 end
 
-const JUKEFILE_NAMES = split("Jukefile jukefile Jukefile.jl jukefile.jl")
+const JUKEFILE_NAME = "juke.jl"
 
 type Error <: Exception
     msg::AbstractString
@@ -278,16 +278,15 @@ function need_update(name, deps)
 end
 
 function parse_args(args)
-    aps = ArgParse.ArgParseSettings("Finish jobs in a Jukefile. Command job name should start with ':' (e.g. `juke :test`).")
+    aps = ArgParse.ArgParseSettings("Finish jobs in a `juke.jl`. Command job name should start with ':' (e.g. `juke :test`).")
     ArgParse.@add_arg_table aps begin
         "targets"
         help="names of jobs to be finished"
         nargs='*'
         "--file", "-f"
-        help="use FILE as a Jukefile"
+        help="use FILE as a Juke file"
         arg_type=String
-        default=JUKEFILE_NAMES
-        nargs=1
+        default=JUKEFILE_NAME
         "--print_dependencies", "-P"
         help="print dependencies"
         action=:store_true
