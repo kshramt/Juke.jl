@@ -23,7 +23,7 @@ type Job
 end
 Job(command, name) = Job(command, name, false)
 
-type JobInfo
+immutable JobInfo
     name::JobName
     deps::Array{JobName, 1}
 end
