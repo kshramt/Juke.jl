@@ -153,7 +153,7 @@ function resolve(invoked_names, job, name_graph)
             error("Undeclared command job: $(repr(name))")
         elseif ispath(name)
             job(name, JobName[]) do j
-                error("No command to create $(repr(j.name))")
+                error("Must not happen: command for a leaf job $(repr(j.name)) called")
             end
         else
             error("No rule for $(repr(name))")
