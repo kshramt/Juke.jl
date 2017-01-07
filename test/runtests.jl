@@ -9,7 +9,7 @@ _n = _->nothing
 let
     finish, job, internals = Juke.new_dsl()
     job(_n, :default, "not_exist.html")
-    @test_throws Juke.Error internals[:resolve](Set())
+    @test_throws Juke.Error internals[:resolve](Set(), job, internals[:name_graph])
 end
 
 let
@@ -18,7 +18,7 @@ let
     job(_n, :default, "c.exe")
     job(_n, ("c.exe", "c.exe"), "c.o")
 
-    internals[:resolve](Set())
+    internals[:resolve](Set(), job, internals[:name_graph])
     @test internals[:name_graph] == Dict(
                                          :default=>["c.exe"],
                                          "c.exe"=>["c.o"],

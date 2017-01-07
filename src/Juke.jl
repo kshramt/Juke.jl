@@ -64,9 +64,9 @@ function new_dsl()
                 error("File job $(repr(name)) should not depend on a command job $(repr(dep)) in $(repr(deps))")
             end
         end
-        _job(command, name, deps)
+        _job(command, name, deps, name_graph, name_to_job)
     end
-    job(command::Function, name::Symbol, deps=()) = _job(command, name, deps)
+    job(command::Function, name::Symbol, deps=()) = _job(command, name, deps, name_graph, name_to_job)
     job(command::Function, names, deps=()) = for name in unique(names)
         if isa(name, Symbol)
             error("Command job is not allowed in a multiple job declaration")
@@ -74,68 +74,14 @@ function new_dsl()
         job(command, name, deps)
     end
 
-    function _job(command::Function, name::JobName, deps)
-        if haskey(name_graph, name)
-            error("Overriding job declarations for $(repr(name))")
-        end
-        name_to_job[name] = Job(command, name)
-        name_graph[name] = JobName[deps...]
-    end
-
     finish(name::JobName=:default, print_dependencies=false) = finish((name,), print_dependencies)
-    finish(names, print_dependencies=false) = _finish(unique(names), print_dependencies)
-
-    function _finish(names, print_dependencies)
-        resolve(names)
-        if print_dependencies
-            print_deps(name_graph)
-        else
-            finish_recur(names)
-        end
-    end
-
-    function resolve(invoked_names)
-        undeclared_job_names = setdiff(
-            union(
-                union(values(name_graph)...),
-                Set{JobName}(invoked_names),
-            ),
-            Set{JobName}(keys(name_graph)),
-        )
-        if length(undeclared_job_names) == 0
-            return nothing
-        end
-
-        for name in undeclared_job_names
-            if isa(name, Symbol)
-                error("Undeclared command job: $(repr(name))")
-            elseif ispath(name)
-                job(name, JobName[]) do j
-                    error("No command to create $(repr(j.name))")
-                end
-            else
-                error("No rule for $(repr(name))")
-            end
-        end
-    end
-
-    function finish_recur(name::JobName)
-        j = name_to_job[name]
-        if !j.done
-            j.done = true
-            deps = name_graph[name]
-            for dep in deps
-                finish_recur(dep)
-            end
-
-            if need_update(name, deps)
-                j.command(JobInfo(name, deps))
-            end
-        end
-    end
-    finish_recur(names) = for name in names
-        finish_recur(name)
-    end
+    finish(names, print_dependencies=false) = _finish(
+        unique(names),
+        print_dependencies,
+        job,
+        name_graph,
+        name_to_job,
+    )
 
     # Export
     finish, job,
@@ -145,6 +91,76 @@ function new_dsl()
          :resolve=>resolve
          )
 end
+
+
+function _finish(names, print_dependencies, job, name_graph, name_to_job)
+    resolve(names, job, name_graph)
+    if print_dependencies
+        print_deps(name_graph)
+    else
+        for name in names
+            finish_recur(name, name_graph, name_to_job)
+        end
+    end
+end
+
+
+function finish_recur(name::JobName, name_graph, name_to_job)
+    j = name_to_job[name]
+    if !j.done
+        j.done = true
+        deps = name_graph[name]
+        for dep in deps
+            finish_recur(dep, name_graph, name_to_job)
+        end
+
+        if need_update(name, deps)
+            j.command(JobInfo(name, deps))
+        end
+    end
+end
+
+
+function _job(
+    command::Function,
+    name::JobName,
+    deps,
+    name_graph,
+    name_to_job,
+)
+    if haskey(name_graph, name)
+        error("Overriding job declarations for $(repr(name))")
+    end
+    name_to_job[name] = Job(command, name)
+    name_graph[name] = JobName[deps...]
+end
+
+
+function resolve(invoked_names, job, name_graph)
+    undeclared_job_names = setdiff(
+        union(
+            union(values(name_graph)...),
+            Set{JobName}(invoked_names),
+        ),
+        Set{JobName}(keys(name_graph)),
+    )
+    if length(undeclared_job_names) == 0
+        return nothing
+    end
+
+    for name in undeclared_job_names
+        if isa(name, Symbol)
+            error("Undeclared command job: $(repr(name))")
+        elseif ispath(name)
+            job(name, JobName[]) do j
+                error("No command to create $(repr(j.name))")
+            end
+        else
+            error("No rule for $(repr(name))")
+        end
+    end
+end
+
 
 const empty_name_graph = Dict{JobName, Array{JobName, 1}}
 
