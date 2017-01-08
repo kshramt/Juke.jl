@@ -57,6 +57,12 @@ function run(cmds::Base.AbstractCmd, args...)
 end
 
 
+function rm(path::AbstractString; force=false, recursive=false)
+    info("rm $path")
+    Base.rm(path; force=force, recursive=recursive)
+end
+
+
 function sh(s, exe="bash")
     run(`$exe -c $s`)
 end
@@ -173,7 +179,17 @@ function force(j, dependent_jobs::Dict)
     # `Job` is called only once
     @assert j.n_rest == 0
     if need_update(j)
-        j.f(j)
+        try
+            j.f(j)
+        catch e
+            for t in j.ts
+                try
+                    # should I add recursive?
+                    rm(t, force=true)
+                end
+            end
+            throw(e)
+        end
         # aid for `@assert`
         j.n_rest = -1
     end
