@@ -4,7 +4,7 @@ using Juke
 
 
 function main(args)
-    parsed_args = Juke.parse_args(args)
+    pargs = Juke.parse_args(args)
     JukeContext = Module()
     expr = quote
         using Juke
@@ -17,8 +17,8 @@ function main(args)
         const finish = __juke_dsl__[1]
         const job = __juke_dsl__[2]
 
-        include($(joinpath(pwd(), parsed_args["file"])))
-        finish($(parsed_args["targets"]), $(parsed_args["print_dependencies"]))
+        include($(joinpath(pwd(), pargs["file"])))
+        finish($(pargs["targets"]), $(pargs["print_dependencies"]), $(pargs["jobs"]))
     end
     eval(JukeContext, expr)
 end

@@ -120,7 +120,8 @@ function new_dsl()
         j
     end
 
-    function finish(targets::AbstractVector, print_dependencies=false)
+    function finish(targets::AbstractVector, print_dependencies::Bool, n_jobs::Integer)
+        @assert n_jobs > 0
         if print_dependencies
             print_deps(env)
         else
@@ -129,7 +130,7 @@ function new_dsl()
             for target in targets
                 make_graph!(dependent_jobs, leaf_jobs, target, env, job, ConsNull())
             end
-            force(leaf_jobs, dependent_jobs)
+            process_jobs(leaf_jobs, dependent_jobs, n_jobs)
         end
     end
 
@@ -170,11 +171,63 @@ function make_graph!(dependent_jobs, leaf_jobs, target, env, make_job, call_chai
 end
 
 
-function force(jobs::AbstractVector, dependent_jobs::Dict)
+function process_jobs(jobs::AbstractVector, dependent_jobs::Dict, n_jobs::Integer)
+    push_job, wait_all_tasks = make_task_pool(n_jobs, dependent_jobs)
     for j in jobs
-        force(j, dependent_jobs)
+        push_job(j)
     end
+    wait_all_tasks()
 end
+
+
+function make_task_pool(n_jobs_max, dependent_jobs)
+    stack = []
+    tasks = Set{Task}()
+    all_tasks = []
+
+    function wait_all_tasks()
+        # I was not sure whether it is safe to extend a vector in `for x in v`
+        i = 0
+        while true
+            i += 1
+            length(all_tasks) < i && return
+            wait(all_tasks[i])
+        end
+    end
+
+    function push_job(j)
+        push!(stack, j)
+        if length(tasks) < n_jobs_max
+            t = @task try
+                # I assume there is no `wait` inside array operation etc...
+                while !isempty(stack)
+                    j = pop!(stack)
+                    yield() # give other tasks a chance to be invoked
+                    force(j, dependent_jobs)
+                    for t in j.ts
+                        # top targets does not have dependent jobs
+                        for dj in get!(dependent_jobs, t, [])
+                            dj.n_rest -= 1
+                            if dj.n_rest == 0
+                                push_job(dj)
+                            end
+                        end
+                    end
+                    yield() # give other tasks a chance to get newly produced jobs
+                end
+            finally
+                delete!(tasks, current_task())
+            end
+            push!(tasks, t)
+            schedule(t)
+            push!(all_tasks, t)
+        end
+    end
+
+    push_job, wait_all_tasks
+end
+
+
 function force(j, dependent_jobs::Dict)
     # `Job` is called only once
     @assert j.n_rest == 0
@@ -192,18 +245,6 @@ function force(j, dependent_jobs::Dict)
         end
         # aid for `@assert`
         j.n_rest = -1
-    end
-    for t in j.ts
-        for dj in get!(dependent_jobs, t, [])
-            dj.n_rest -= 1
-        end
-    end
-    for t in j.ts
-        for dj in dependent_jobs[t]
-            if dj.n_rest == 0
-                force(dj, dependent_jobs)
-            end
-        end
     end
 end
 
@@ -230,13 +271,17 @@ function parse_args(args)
         help="use FILE as a Juke file"
         arg_type=String
         default=JUKEFILE_NAME
+        "--jobs", "-j"
+        help="Number of parallel jobs"
+        arg_type=Int
+        default=1
         "--print_dependencies", "-P"
         help="print dependencies"
         action=:store_true
     end
-    parsed_args = ArgParse.parse_args(args, aps)
-    parsed_args["targets"] = parse_names(parsed_args["targets"])
-    parsed_args
+    pargs = ArgParse.parse_args(args, aps)
+    pargs["targets"] = parse_names(pargs["targets"])
+    pargs
 end
 
 
