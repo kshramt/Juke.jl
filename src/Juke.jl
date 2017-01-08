@@ -298,7 +298,7 @@ end
 
 
 function parse_args(args)
-    aps = ArgParse.ArgParseSettings("Finish jobs in a $JUKEFILE_NAME. Command job name should start with ':' (e.g. `juke :test`).")
+    aps = ArgParse.ArgParseSettings("Execute jobs in $JUKEFILE_NAME. Phony job name should start with ':' (e.g. `juke :test`).")
     ArgParse.@add_arg_table aps begin
         "targets"
         help="names of jobs to be finished"
