@@ -14,9 +14,9 @@ err(s...) = err(string(s...))
 Base.showerror(io::IO, e::Error) = print(io, e.msg)
 #showerror(io::IO, e::Error) = print(io, e.msg)
 
-immutable Cons{H, T}
+immutable Cons{H}
     hd::H
-    tl::T
+    tl
 end
 immutable ConsNull
 end
