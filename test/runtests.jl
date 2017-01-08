@@ -1,26 +1,23 @@
 import Base.Test: @test, @test_throws
 
-# Just in a case where `Juke` is not in `~/.julia`
-import Juke
+using Juke
 
 _n = _->nothing
 
 let
     finish, job, internals = Juke.new_dsl()
     job(_n, :default, "not_exist.html")
-    @test_throws Juke.Error internals[:resolve](Set(), job, internals[:name_graph])
 end
 
 let
     finish, job, internals = Juke.new_dsl()
 
     job(_n, :default, "c.exe")
-    job(_n, ("c.exe", "c.exe"), "c.o")
+    job(_n, ["d.exe", "c.exe"], "c.o")
 
-    internals[:resolve](Set(), job, internals[:name_graph])
-    @test internals[:name_graph] == Dict(
-                                         :default=>["c.exe"],
-                                         "c.exe"=>["c.o"],
-                                         "c.o"=>[],
-                                         )
+    @test Juke.graph_of_env(internals[:env]) == Dict(
+        :default => ["c.exe"],
+        "c.exe" => ["c.o"],
+        "d.exe" => ["c.o"],
+    )
 end

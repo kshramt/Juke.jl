@@ -9,37 +9,56 @@ const JUKEFILE_NAME = "Jukefile.jl"
 type Error <: Exception
     msg::AbstractString
 end
-error(s::AbstractString) = throw(Error(s))
-error(s...) = error(string(s...))
+err(s::AbstractString) = throw(Error(s))
+err(s...) = err(string(s...))
 Base.showerror(io::IO, e::Error) = print(io, e.msg)
 #showerror(io::IO, e::Error) = print(io, e.msg)
 
-typealias JobName Union{String, Symbol}
-
-type Job
-    command::Function
-    name::JobName
-    done::Bool
+immutable Cons{H, T}
+    hd::H
+    tl::T
 end
-Job(command, name) = Job(command, name, false)
-
-immutable JobInfo
-    name::JobName
-    deps::Array{JobName, 1}
+immutable ConsNull
 end
+cons(hd, tl) = Cons(hd, tl)
+Base.in(x, c::ConsNull) = false
+Base.in(x, c::Cons) = c.hd == x || x in c.tl
+
+
+type Job{T, D}
+    f::Function
+    ts::Vector{T} # targets
+    ds::Vector{D} # deps
+    # number of dependencies not ready
+    # - 0 if invokable
+    # - -1 if invoked
+    n_rest::Integer
+    visited::Bool
+
+    function Job(f, ts, ds)
+        @assert length(unique(ds)) == length(ds)
+        new(f, ts, ds, length(ds), false)
+    end
+end
+Job(f, ts::Vector{Symbol}, ds::Vector{Symbol}) = Job{Symbol, Symbol}(f, ts ,ds)
+Job{S<:AbstractString}(f, ts::Vector{Symbol}, ds::Vector{S}) = Job{Symbol, S}(f, ts ,ds)
+Job{S<:AbstractString}(f, ts::Vector{S}, ds::Vector{S}) = Job{S, S}(f, ts ,ds)
+
 
 function cd(f::Function, d::AbstractString)
     info("cd $(d)")
     Base.cd(f, d)
 end
 
+
 function run(cmds::Base.AbstractCmd, args...)
     info(cmds)
     Base.run(cmds, args...)
 end
 
-function print_deps(d::Dict)
-    for (target, deps) in d
+
+function print_deps(env::Dict)
+    for (target, deps) in graph_of_env(env)
         println(repr(target))
         for dep in deps
             println('\t', repr(dep))
@@ -47,142 +66,137 @@ function print_deps(d::Dict)
     end
 end
 
+
+function graph_of_env(env::Dict)
+    ret = Dict()
+    for (target, j) in env
+        ret[target] = j.ds
+    end
+    ret
+end
+
+
 function new_dsl()
     # Environment
-    name_graph = empty_name_graph()
-    name_to_job = Dict{JobName, Job}()
+    env = Dict()
 
     # DSL
-    job(name::Symbol, dep::JobName) = job(name, (dep,))
-    job(name::Symbol, deps) = job(_->nothing, name, deps)
-    job(name::AbstractString, deps) = error("File job $(repr(name)) should have command")
-    job(command::Function, name::Symbol, dep::JobName) = job(command, name, (dep,))
-    job(command::Function, name::AbstractString, dep::JobName) = job(command, name, (dep,))
-    function job(command::Function, name::AbstractString, deps)
-        for dep in deps
-            if isa(dep, Symbol)
-                error("File job $(repr(name)) should not depend on a command job $(repr(dep)) in $(repr(deps))")
-            end
+    job{S<:AbstractString}(f::Function, target::S) = job(f, target, S[])
+    job(f::Function, target::AbstractString, dep::AbstractString) = job(f, [target], [dep])
+    job(f::Function, target::AbstractString, deps::AbstractVector) = job(f, [target], deps)
+
+    job(target::Symbol, dep::Union{Symbol, AbstractString}) = job(target, [dep])
+    job(target::Symbol, deps::AbstractVector) = job(_->nothing, target, deps)
+
+    job{S<:AbstractString}(f::Function, targets::Vector{S}) = job(f, targets, S[])
+    job{S<:AbstractString}(f::Function, targets::Vector{S}, dep::AbstractString) = job(f, targets, [dep])
+
+    job(f::Function, target::Symbol) = job(f, target, Symbol[])
+    job(f::Function, target::Symbol, dep::Union{Symbol, AbstractString}) = job(f, target, [dep])
+    job(f::Function, target::Symbol, deps::AbstractVector) = job(f, [target], deps)
+
+    job(targets::AbstractVector{Symbol}, dep::Union{Symbol, AbstractString}) = job(targets, [dep])
+    job(targets::AbstractVector{Symbol}, deps::AbstractVector) = job(_->nothing, targets, deps)
+
+    job(f::Function, targets::AbstractVector{Symbol}) = job(f, targets, Symbol[])
+    job(f::Function, targets::AbstractVector{Symbol}, dep::Union{Symbol, AbstractString}) = job(f, targets, [dep])
+
+    function job(f::Function, targets::AbstractVector, deps::AbstractVector)
+        j = Job(f, targets, deps)
+        for t in targets
+            uniqsetindex!(env, j, t)
         end
-        _job(command, name, deps, name_graph, name_to_job)
-    end
-    job(command::Function, name::Symbol, deps=()) = _job(command, name, deps, name_graph, name_to_job)
-    job(command::Function, names, deps=()) = for name in unique(names)
-        if isa(name, Symbol)
-            error("Command job is not allowed in a multiple job declaration")
-        end
-        job(command, name, deps)
+        j
     end
 
-    finish(name::JobName=:default, print_dependencies=false) = finish((name,), print_dependencies)
-    finish(names, print_dependencies=false) = _finish(
-        unique(names),
-        print_dependencies,
-        job,
-        name_graph,
-        name_to_job,
-    )
+    function finish(targets::AbstractVector, print_dependencies=false)
+        if print_dependencies
+            print_deps(env)
+        else
+            dependent_jobs = Dict()
+            leaf_jobs = []
+            for target in targets
+                make_graph!(dependent_jobs, leaf_jobs, target, env, job, ConsNull())
+            end
+            force(leaf_jobs, dependent_jobs)
+        end
+    end
 
     # Export
-    finish, job,
-    Dict(
-         :name_graph=>name_graph,
-         :name_to_job=>name_to_job,
-         :resolve=>resolve
-         )
-end
-
-
-function _finish(names, print_dependencies, job, name_graph, name_to_job)
-    resolve(names, job, name_graph)
-    if print_dependencies
-        print_deps(name_graph)
-    else
-        for name in names
-            finish_recur(name, name_graph, name_to_job)
-        end
-    end
-end
-
-
-function finish_recur(name::JobName, name_graph, name_to_job)
-    j = name_to_job[name]
-    if !j.done
-        j.done = true
-        deps = name_graph[name]
-        for dep in deps
-            finish_recur(dep, name_graph, name_to_job)
-        end
-
-        if need_update(name, deps)
-            j.command(JobInfo(name, deps))
-        end
-    end
-end
-
-
-function _job(
-    command::Function,
-    name::JobName,
-    deps,
-    name_graph,
-    name_to_job,
-)
-    if haskey(name_graph, name)
-        error("Overriding job declarations for $(repr(name))")
-    end
-    name_to_job[name] = Job(command, name)
-    name_graph[name] = JobName[deps...]
-end
-
-
-function resolve(invoked_names, job, name_graph)
-    undeclared_job_names = setdiff(
-        union(
-            union(values(name_graph)...),
-            Set{JobName}(invoked_names),
+    (
+        finish,
+        job,
+        Dict(
+            :env => env,
         ),
-        Set{JobName}(keys(name_graph)),
     )
-    if length(undeclared_job_names) == 0
-        return nothing
-    end
+end
 
-    for name in undeclared_job_names
-        if isa(name, Symbol)
-            error("Undeclared command job: $(repr(name))")
-        elseif ispath(name)
-            job(name, JobName[]) do j
-                error("Must not happen: command for a leaf job $(repr(j.name)) called")
+
+function make_graph!(dependent_jobs, leaf_jobs, target, env, make_job, call_chain)
+    @assert !(target in call_chain)
+    if !haskey(env, target)
+        if isa(target, AbstractString) && ispath(target)
+            make_job([target], []) do j
+                err("Must not happen: job for leaf node $(repr(target)) called")
             end
         else
-            error("No rule for $(repr(name))")
+            err("No rule to make $(repr(target))")
+        end
+    end
+    j = env[target]
+    j.visited && return
+    j.visited = true
+
+    current_call_chain = Cons(target, call_chain)
+    for dep in j.ds
+        push!(get!(dependent_jobs, dep, []), j)
+        make_graph!(dependent_jobs, leaf_jobs, dep, env, make_job, current_call_chain)
+    end
+    isempty(j.ds) && push!(leaf_jobs, j)
+
+    dependent_jobs, leaf_jobs
+end
+
+
+function force(jobs::AbstractVector, dependent_jobs::Dict)
+    for j in jobs
+        force(j, dependent_jobs)
+    end
+end
+function force(j, dependent_jobs::Dict)
+    # `Job` is called only once
+    @assert j.n_rest == 0
+    if need_update(j)
+        j.f(j)
+        # aid for `@assert`
+        j.n_rest = -1
+    end
+    for t in j.ts
+        for dj in get!(dependent_jobs, t, [])
+            dj.n_rest -= 1
+        end
+    end
+    for t in j.ts
+        for dj in dependent_jobs[t]
+            if dj.n_rest == 0
+                force(dj, dependent_jobs)
+            end
         end
     end
 end
 
 
-const empty_name_graph = Dict{JobName, Array{JobName, 1}}
+need_update(::Job{Symbol}) = true
+function need_update(j)
+    dep_stat_list = map(stat, j.ds)
+    # dependencies should exist
+    @assert all(ispath, dep_stat_list)
+    target_stat_list = map(stat, j.ts)
+    all(ispath, target_stat_list) || return true
+    maximum(mtime, dep_stat_list) > minimum(mtime, target_stat_list)
+end
 
-need_update(name::Symbol, dep::Symbol) = true
-need_update(name::Symbol, dep) = true
-need_update(name, dep::Symbol) = true
-function need_update(name::AbstractString, dep::AbstractString)
-    if ispath(name) && ispath(dep)
-        mtime(name) < mtime(dep)
-    else
-        true
-    end
-end
-function need_update(name, deps)
-    if length(deps) == 0
-        !ispath(name)
-    else
-        any(deps) do dep
-            need_update(name, dep)
-        end
-    end
-end
 
 function parse_args(args)
     aps = ArgParse.ArgParseSettings("Finish jobs in a $JUKEFILE_NAME. Command job name should start with ':' (e.g. `juke :test`).")
@@ -203,8 +217,9 @@ function parse_args(args)
     parsed_args
 end
 
+
 function parse_names(names)
-    ret = JobName[]
+    ret = []
     for name in names
         if startswith(name, ':')
             name = symbol(name[2:end])
@@ -215,6 +230,12 @@ function parse_names(names)
         push!(ret, :default)
     end
     ret
+end
+
+
+function uniqsetindex!(d::Dict, v, k)
+    @assert !haskey(d, k)
+    d[k] = v
 end
 
 end
