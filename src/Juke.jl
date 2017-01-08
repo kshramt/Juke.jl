@@ -2,7 +2,7 @@ __precompile__()
 
 module Juke
 
-import ArgParse
+using ArgParse
 
 const JUKEFILE_NAME = "Jukefile.jl"
 

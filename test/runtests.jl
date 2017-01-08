@@ -1,4 +1,4 @@
-import Base.Test: @test, @test_throws
+using Base.Test: @test, @test_throws
 
 using Juke
 
