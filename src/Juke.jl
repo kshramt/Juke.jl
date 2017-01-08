@@ -289,7 +289,7 @@ function parse_names(names)
     ret = []
     for name in names
         if startswith(name, ':')
-            name = symbol(name[2:end])
+            name = Symbol(name[2:end])
         end
         push!(ret, name)
     end
