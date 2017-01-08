@@ -213,7 +213,6 @@ function make_task_pool(n_jobs_max, dependent_jobs)
                             end
                         end
                     end
-                    yield() # give other tasks a chance to get newly produced jobs
                 end
             finally
                 delete!(tasks, current_task())
