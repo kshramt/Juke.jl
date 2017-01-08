@@ -25,24 +25,40 @@ Base.in(x, c::ConsNull) = false
 Base.in(x, c::Cons) = c.hd == x || x in c.tl
 
 
-type Job{T, D}
+abstract AbstractJob
+
+type PhonyJob <: AbstractJob
     f::Function
-    ts::Vector{T} # targets
-    ds::Vector{D} # deps
+    ts::Vector{Symbol} # using `Vector` for consistency with `FileJob`
+    ds::Vector # `Symbol[]` or `String[]`
     # number of dependencies not ready
-    # - 0 if forceable
+    # - 0 if force able
+    # - -1 if forced
+    n_rest::Int
+    visited::Bool
+
+    function PhonyJob(f, t, ds)
+        @assert length(unique(ds)) == length(ds)
+        new(f, [t], ds, length(ds), false)
+    end
+end
+
+type FileJob{S<:AbstractString} <: AbstractJob
+    f::Function
+    ts::Vector{S} # targets
+    ds::Vector{S} # deps
+    # number of dependencies not ready
+    # - 0 if force able
     # - -1 if forced
     n_rest::Integer
     visited::Bool
 
-    function Job(f, ts, ds)
+    function FileJob(f, ts, ds)
         @assert length(unique(ds)) == length(ds)
         new(f, ts, ds, length(ds), false)
     end
 end
-Job(f, ts::Vector{Symbol}, ds::Vector{Symbol}) = Job{Symbol, Symbol}(f, ts ,ds)
-Job{S<:AbstractString}(f, ts::Vector{Symbol}, ds::Vector{S}) = Job{Symbol, S}(f, ts ,ds)
-Job{S<:AbstractString}(f, ts::Vector{S}, ds::Vector{S}) = Job{S, S}(f, ts ,ds)
+FileJob{S<:AbstractString}(f::Function, ts::AbstractVector{S}, ds::AbstractVector{S}) = FileJob{S}(f, ts, ds)
 
 
 function cd(f::Function, d::AbstractString)
@@ -68,8 +84,8 @@ function sh(s, exe="bash")
 end
 
 
-function print_deps(env::Dict)
-    for (target, deps) in graph_of_env(env)
+function print_deps(job_of_target::Dict)
+    for (target, deps) in graph_of_job_of_target(job_of_target)
         println(repr(target))
         for dep in deps
             println('\t', repr(dep))
@@ -78,9 +94,9 @@ function print_deps(env::Dict)
 end
 
 
-function graph_of_env(env::Dict)
+function graph_of_job_of_target(job_of_target::Dict)
     ret = Dict()
-    for (target, j) in env
+    for (target, j) in job_of_target
         ret[target] = j.ds
     end
     ret
@@ -89,46 +105,53 @@ end
 
 function new_dsl()
     # Environment
-    env = Dict()
+    job_of_target = Dict()
+    f_of_phony = Dict{Symbol, Function}()
+    deps_of_phony = Dict{Symbol, AbstractVector}()
 
     # DSL
-    job{S<:AbstractString}(f::Function, target::S) = job(f, target, S[])
-    job(f::Function, target::AbstractString, dep::AbstractString) = job(f, [target], [dep])
-    job(f::Function, target::AbstractString, deps::AbstractVector) = job(f, [target], deps)
+    job{S<:AbstractString}(f::Function, target::S) = file_job(f, [target], S[])
+    job{S<:AbstractString}(f::Function, targets::Vector{S}) = file_job(f, targets, S[])
+    job(f::Function, target::AbstractString, dep::AbstractString) = file_job(f, [target], [dep])
+    job{S<:AbstractString}(f::Function, target::AbstractString, deps::AbstractVector{S}) = file_job(f, [target], deps)
+    job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, dep::AbstractString) = file_job(f, targets, [dep])
+    job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, deps::AbstractVector{S}) = file_job(f, targets, deps)
 
-    job(target::Symbol, dep::Union{Symbol, AbstractString}) = job(target, [dep])
-    job(target::Symbol, deps::AbstractVector) = job(_->nothing, target, deps)
+    job(target::Symbol, dep::Union{Symbol, AbstractString}) = phony_job(target, [dep])
+    job(target::Symbol, deps::AbstractVector) = phony_job(target, deps)
 
-    job{S<:AbstractString}(f::Function, targets::Vector{S}) = job(f, targets, S[])
-    job{S<:AbstractString}(f::Function, targets::Vector{S}, dep::AbstractString) = job(f, targets, [dep])
+    job(f::Function, target::Symbol) = phony_job(f, target, Symbol[])
+    job(f::Function, target::Symbol, dep::Union{Symbol, AbstractString}) = phony_job(f, target, [dep])
+    job(f::Function, target::Symbol, deps::AbstractVector) = phony_job(f, target, deps)
 
-    job(f::Function, target::Symbol) = job(f, target, Symbol[])
-    job(f::Function, target::Symbol, dep::Union{Symbol, AbstractString}) = job(f, target, [dep])
-    job(f::Function, target::Symbol, deps::AbstractVector) = job(f, [target], deps)
-
-    job(targets::AbstractVector{Symbol}, dep::Union{Symbol, AbstractString}) = job(targets, [dep])
-    job(targets::AbstractVector{Symbol}, deps::AbstractVector) = job(_->nothing, targets, deps)
-
-    job(f::Function, targets::AbstractVector{Symbol}) = job(f, targets, Symbol[])
-    job(f::Function, targets::AbstractVector{Symbol}, dep::Union{Symbol, AbstractString}) = job(f, targets, [dep])
-
-    function job(f::Function, targets::AbstractVector, deps::AbstractVector)
-        j = Job(f, targets, deps)
+    function file_job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, deps::AbstractVector{S})
+        j = FileJob(f, targets, deps)
         for t in targets
-            uniqsetindex!(env, j, t)
+            uniqsetindex!(job_of_target, j, t)
         end
-        j
+    end
+
+    function phony_job(f::Function, target::Symbol, deps::AbstractVector)
+        uniqsetindex!(f_of_phony, f, target)
+        phony_job(target, deps)
+    end
+    function phony_job(target::Symbol, deps::AbstractVector)
+        append!(get!(deps_of_phony, target, []), deps)
     end
 
     function finish(targets::AbstractVector, print_dependencies::Bool, n_jobs::Integer)
         @assert n_jobs > 0
+
+        collect_phonies!(job_of_target, deps_of_phony, f_of_phony)
+        deps_of_phony = nothing
+        f_of_phony = nothing
         if print_dependencies
-            print_deps(env)
+            print_deps(job_of_target)
         else
             dependent_jobs = Dict()
             leaf_jobs = []
             for target in targets
-                make_graph!(dependent_jobs, leaf_jobs, target, env, job, ConsNull())
+                make_graph!(dependent_jobs, leaf_jobs, target, job_of_target, job, ConsNull())
             end
             process_jobs(leaf_jobs, dependent_jobs, n_jobs)
         end
@@ -139,15 +162,29 @@ function new_dsl()
         finish,
         job,
         Dict(
-            :env => env,
+            :job_of_target => job_of_target,
+            :deps_of_phony => deps_of_phony,
+            :f_of_phony => f_of_phony,
         ),
     )
 end
 
 
-function make_graph!(dependent_jobs, leaf_jobs, target, env, make_job, call_chain)
+function collect_phonies!(job_of_target, deps_of_phony, f_of_phony)
+    for (target, deps) in deps_of_phony
+        uniqsetindex!(
+            job_of_target,
+            PhonyJob(get(f_of_phony, target, do_nothing), target, deps),
+            target,
+        )
+    end
+    job_of_target
+end
+
+
+function make_graph!(dependent_jobs, leaf_jobs, target, job_of_target, make_job, call_chain)
     @assert !(target in call_chain)
-    if !haskey(env, target)
+    if !haskey(job_of_target, target)
         if isa(target, AbstractString) && ispath(target)
             make_job([target], String[]) do j
                 err("Must not happen: job for leaf node $(repr(target)) called")
@@ -156,14 +193,14 @@ function make_graph!(dependent_jobs, leaf_jobs, target, env, make_job, call_chai
             err("No rule to make $(repr(target))")
         end
     end
-    j = env[target]
+    j = job_of_target[target]
     j.visited && return
     j.visited = true
 
     current_call_chain = Cons(target, call_chain)
     for dep in j.ds
         push!(get!(dependent_jobs, dep, []), j)
-        make_graph!(dependent_jobs, leaf_jobs, dep, env, make_job, current_call_chain)
+        make_graph!(dependent_jobs, leaf_jobs, dep, job_of_target, make_job, current_call_chain)
     end
     isempty(j.ds) && push!(leaf_jobs, j)
 
@@ -248,8 +285,8 @@ function force(j, dependent_jobs::Dict)
 end
 
 
-need_update(::Job{Symbol}) = true
-function need_update(j)
+need_update(::PhonyJob) = true
+function need_update(j::FileJob)
     dep_stat_list = map(stat, j.ds)
     # dependencies should exist
     @assert all(ispath, dep_stat_list)
@@ -302,6 +339,11 @@ end
 function uniqsetindex!(d::Dict, v, k)
     @assert !haskey(d, k)
     d[k] = v
+end
+
+
+function do_nothing(j)
+    nothing
 end
 
 end

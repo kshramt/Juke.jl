@@ -9,22 +9,28 @@ let
     @assert 3 in c
 end
 
-_n = _->nothing
-
 let
     finish, job, internals = Juke.new_dsl()
-    job(_n, :default, "not_exist.html")
+    job(j->nothing, :default, "not_exist.html")
 end
 
 let
     finish, job, internals = Juke.new_dsl()
 
-    job(_n, :default, "c.exe")
-    job(_n, ["d.exe", "c.exe"], "c.o")
+    job(:default, "c.exe")
+    job(:default, "e.exe")
+    job(j->nothing, ["d.exe", "c.exe", "e.exe"], "c.o")
 
-    @test Juke.graph_of_env(internals[:env]) == Dict(
-        :default => ["c.exe"],
+    @test Juke.graph_of_job_of_target(
+        Juke.collect_phonies!(
+            internals[:job_of_target],
+            internals[:deps_of_phony],
+            internals[:f_of_phony],
+        ),
+    ) == Dict(
+        :default => ["c.exe", "e.exe"],
         "c.exe" => ["c.o"],
         "d.exe" => ["c.o"],
+        "e.exe" => ["c.o"],
     )
 end
