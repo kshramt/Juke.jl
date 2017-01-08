@@ -197,7 +197,7 @@ function make_task_pool(n_jobs_max, dependent_jobs)
 
     function push_job(j)
         push!(stack, j)
-        if length(tasks) < n_jobs_max
+        if length(tasks) <= n_jobs_max
             t = @task try
                 # I assume there is no `wait` inside array operation etc...
                 while !isempty(stack)
