@@ -30,8 +30,8 @@ type Job{T, D}
     ts::Vector{T} # targets
     ds::Vector{D} # deps
     # number of dependencies not ready
-    # - 0 if invokable
-    # - -1 if invoked
+    # - 0 if forceable
+    # - -1 if forced
     n_rest::Integer
     visited::Bool
 
@@ -243,8 +243,8 @@ function force(j, dependent_jobs::Dict)
             throw(e)
         end
         # aid for `@assert`
-        j.n_rest = -1
     end
+    j.n_rest = -1
 end
 
 
