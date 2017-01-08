@@ -2,6 +2,13 @@ import Base.Test: @test, @test_throws
 
 using Juke
 
+let
+    c = Juke.Cons(3, Juke.ConsNull())
+    @assert !(:a in c)
+    c = Juke.Cons(:a, c)
+    @assert 3 in c
+end
+
 _n = _->nothing
 
 let
