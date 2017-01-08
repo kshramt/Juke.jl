@@ -17,8 +17,11 @@ function main(args)
         const finish = __juke_dsl__[1]
         const job = __juke_dsl__[2]
 
-        include($(joinpath(pwd(), pargs["file"])))
-        finish($(pargs["targets"]), $(pargs["print_dependencies"]), $(pargs["jobs"]))
+        function main()
+            include($(joinpath(pwd(), pargs["file"])))
+            finish($(pargs["targets"]), $(pargs["print_dependencies"]), $(pargs["jobs"]))
+        end
+        main()
     end
     eval(JukeContext, expr)
 end
