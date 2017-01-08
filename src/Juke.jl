@@ -4,7 +4,7 @@ module Juke
 
 import ArgParse
 
-const JUKEFILE_NAME = "juke.jl"
+const JUKEFILE_NAME = "Jukefile.jl"
 
 type Error <: Exception
     msg::AbstractString
@@ -185,7 +185,7 @@ function need_update(name, deps)
 end
 
 function parse_args(args)
-    aps = ArgParse.ArgParseSettings("Finish jobs in a `juke.jl`. Command job name should start with ':' (e.g. `juke :test`).")
+    aps = ArgParse.ArgParseSettings("Finish jobs in a $JUKEFILE_NAME. Command job name should start with ':' (e.g. `juke :test`).")
     ArgParse.@add_arg_table aps begin
         "targets"
         help="names of jobs to be finished"
