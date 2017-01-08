@@ -1,15 +1,24 @@
 #!/usr/bin/env julia
 
-import Juke: run, cd
+using Juke
 
-const __juke_dsl__ = Juke.new_dsl()
-const finish = __juke_dsl__[1]
-const job = __juke_dsl__[2]
 
 function main(args)
     parsed_args = Juke.parse_args(args)
-    include(joinpath(pwd(), parsed_args["file"]))
-    finish(parsed_args["targets"], parsed_args["print_dependencies"])
+    JukeContext = Module()
+    expr = quote
+        using Juke
+        const cd = Juke.cd
+        const run = Juke.run
+
+        const __juke_dsl__ = Juke.new_dsl()
+        const finish = __juke_dsl__[1]
+        const job = __juke_dsl__[2]
+
+        include($(joinpath(pwd(), parsed_args["file"])))
+        finish($(parsed_args["targets"]), $(parsed_args["print_dependencies"]))
+    end
+    eval(JukeContext, expr)
 end
 
 if realpath(PROGRAM_FILE) == realpath(@__FILE__)
