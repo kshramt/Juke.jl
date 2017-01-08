@@ -57,6 +57,11 @@ function run(cmds::Base.AbstractCmd, args...)
 end
 
 
+function sh(s, exe="bash")
+    run(`$exe -c $s`)
+end
+
+
 function print_deps(env::Dict)
     for (target, deps) in graph_of_env(env)
         println(repr(target))
@@ -137,7 +142,7 @@ function make_graph!(dependent_jobs, leaf_jobs, target, env, make_job, call_chai
     @assert !(target in call_chain)
     if !haskey(env, target)
         if isa(target, AbstractString) && ispath(target)
-            make_job([target], []) do j
+            make_job([target], String[]) do j
                 err("Must not happen: job for leaf node $(repr(target)) called")
             end
         else
@@ -194,6 +199,7 @@ function need_update(j)
     @assert all(ispath, dep_stat_list)
     target_stat_list = map(stat, j.ts)
     all(ispath, target_stat_list) || return true
+    isempty(dep_stat_list) && return false
     maximum(mtime, dep_stat_list) > minimum(mtime, target_stat_list)
 end
 
