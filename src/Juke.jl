@@ -117,6 +117,7 @@ function new_dsl()
     job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, dep::AbstractString) = file_job(f, targets, [dep])
     job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, deps::AbstractVector{S}) = file_job(f, targets, deps)
 
+    job(target::Symbol) = phony_job(target, Symbol[])
     job(target::Symbol, dep::Union{Symbol, AbstractString}) = phony_job(target, [dep])
     job(target::Symbol, deps::AbstractVector) = phony_job(target, deps)
 
