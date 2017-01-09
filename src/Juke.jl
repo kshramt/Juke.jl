@@ -297,25 +297,27 @@ function need_update(j::FileJob)
 end
 
 
+const argparse_conf = ArgParse.ArgParseSettings("Execute jobs in $JUKEFILE_NAME. Phony job name should start with ':' (e.g. `juke :test`).")
+ArgParse.@add_arg_table argparse_conf begin
+    "targets"
+    help="names of jobs to be finished"
+    nargs='*'
+    "--file", "-f"
+    help="use FILE as a Juke file"
+    arg_type=String
+    default=JUKEFILE_NAME
+    "--jobs", "-j"
+    help="Number of parallel jobs"
+    arg_type=Int
+    default=1
+    "--print_dependencies", "-P"
+    help="print dependencies"
+    action=:store_true
+end
+
+
 function parse_args(args)
-    aps = ArgParse.ArgParseSettings("Execute jobs in $JUKEFILE_NAME. Phony job name should start with ':' (e.g. `juke :test`).")
-    ArgParse.@add_arg_table aps begin
-        "targets"
-        help="names of jobs to be finished"
-        nargs='*'
-        "--file", "-f"
-        help="use FILE as a Juke file"
-        arg_type=String
-        default=JUKEFILE_NAME
-        "--jobs", "-j"
-        help="Number of parallel jobs"
-        arg_type=Int
-        default=1
-        "--print_dependencies", "-P"
-        help="print dependencies"
-        action=:store_true
-    end
-    pargs = ArgParse.parse_args(args, aps)
+    pargs = ArgParse.parse_args(args, argparse_conf)
     pargs["targets"] = parse_names(pargs["targets"])
     pargs
 end
