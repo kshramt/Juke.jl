@@ -50,7 +50,7 @@ type FileJob{S<:AbstractString} <: AbstractJob
     # number of dependencies not ready
     # - 0 if force able
     # - -1 if forced
-    n_rest::Integer
+    n_rest::Int
     visited::Bool
 
     function FileJob(f, ts, ds)
