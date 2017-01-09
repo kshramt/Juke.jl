@@ -14,8 +14,8 @@ err(s...) = err(string(s...))
 Base.showerror(io::IO, e::Error) = print(io, e.msg)
 #showerror(io::IO, e::Error) = print(io, e.msg)
 
-immutable Cons{H}
-    hd::H
+immutable Cons
+    hd
     tl
 end
 immutable ConsNull
@@ -38,7 +38,7 @@ type PhonyJob <: AbstractJob
     visited::Bool
 
     function PhonyJob(f, t, ds)
-        @assert length(unique(ds)) == length(ds)
+        length(unique(ds)) == length(ds) || err("Dependencies should not be duplicated: $(ds)")
         new(f, [t], ds, length(ds), false)
     end
 end
@@ -54,7 +54,7 @@ type FileJob{S<:AbstractString} <: AbstractJob
     visited::Bool
 
     function FileJob(f, ts, ds)
-        @assert length(unique(ds)) == length(ds)
+        length(unique(ds)) == length(ds) || err("Dependencies should not be duplicated: $(ds)")
         new(f, ts, ds, length(ds), false)
     end
 end
@@ -184,7 +184,7 @@ end
 
 
 function make_graph!(dependent_jobs, leaf_jobs, target, job_of_target, make_job, call_chain)
-    @assert !(target in call_chain)
+    (target in call_chain) && err("A circular dependency detected: $(repr(target)) for $(repr(call_chain))")
     if !haskey(job_of_target, target)
         if isa(target, AbstractString) && ispath(target)
             make_job([target], String[]) do j
