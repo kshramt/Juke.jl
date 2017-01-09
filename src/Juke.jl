@@ -273,14 +273,14 @@ function force(j, dependent_jobs::Dict)
         catch e
             for t in j.ts
                 try
-                    # should I add recursive?
+                    # should I add `recursive=true`?
                     rm(t, force=true)
                 end
             end
             throw(e)
         end
-        # aid for `@assert`
     end
+    # This job was `force`d
     j.n_rest = -1
 end
 
