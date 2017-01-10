@@ -10,12 +10,12 @@ let
 end
 
 let
-    finish, job, internals = Juke.new_dsl()
+    finish, job, internals = Juke.make_dsl()
     job(j->nothing, :default, "not_exist.html")
 end
 
 let
-    finish, job, internals = Juke.new_dsl()
+    finish, job, internals = Juke.make_dsl()
 
     job(:default, "c.exe")
     job(:default, "e.exe")

@@ -86,7 +86,7 @@ function graph_of_job_of_target(job_of_target::Dict)
 end
 
 
-function new_dsl()
+function make_dsl()
     # Environment
     job_of_target = Dict()
     f_of_phony = Dict{Symbol, Function}()
