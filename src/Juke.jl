@@ -25,40 +25,23 @@ Base.in(x, c::ConsNull) = false
 Base.in(x, c::Cons) = c.hd == x || x in c.tl
 
 
-abstract AbstractJob
-
-type PhonyJob <: AbstractJob
+type Job{T, D}
     f::Function
-    ts::Vector{Symbol} # using `Vector` for consistency with `FileJob`
-    ds::Vector # `Symbol[]` or `String[]`
+    ts::Vector{T} # targets
+    ds::Vector{D} # dependencies
     # number of dependencies not ready
     # - 0 if executable
     # - -1 if executed
     n_rest::Int
     visited::Bool
 
-    function PhonyJob(f, t, ds)
-        length(unique(ds)) == length(ds) || err("Dependencies should not be duplicated: $(ds)")
-        new(f, [t], ds, length(ds), false)
-    end
-end
-
-type FileJob{S<:AbstractString} <: AbstractJob
-    f::Function
-    ts::Vector{S} # targets
-    ds::Vector{S} # deps
-    # number of dependencies not ready
-    # - 0 if executable
-    # - -1 if executed
-    n_rest::Int
-    visited::Bool
-
-    function FileJob(f, ts, ds)
+    function Job(f, ts, ds)
         length(unique(ds)) == length(ds) || err("Dependencies should not be duplicated: $(ds)")
         new(f, ts, ds, length(ds), false)
     end
 end
-FileJob{S<:AbstractString}(f::Function, ts::AbstractVector{S}, ds::AbstractVector{S}) = FileJob{S}(f, ts, ds)
+Job{D}(f::Function, t::Symbol, ds::AbstractVector{D}) = Job{Symbol, D}(f, [t], ds)
+Job{S<:AbstractString}(f::Function, ts::AbstractVector{S}, ds::AbstractVector{S}) = Job{S, S}(f, ts, ds)
 
 
 function cd(f::Function, d::AbstractString)
@@ -126,7 +109,7 @@ function new_dsl()
     job(f::Function, target::Symbol, deps::AbstractVector) = phony_job(f, target, deps)
 
     function file_job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, deps::AbstractVector{S})
-        j = FileJob(f, targets, deps)
+        j = Job(f, targets, deps)
         for t in targets
             uniqsetindex!(job_of_target, j, t)
         end
@@ -180,7 +163,7 @@ function collect_phonies!(job_of_target, deps_of_phony, f_of_phony)
     for (target, deps) in deps_of_phony
         uniqsetindex!(
             job_of_target,
-            PhonyJob(get(f_of_phony, target, do_nothing), target, deps),
+            Job(get(f_of_phony, target, do_nothing), target, deps),
             target,
         )
     end
@@ -304,8 +287,8 @@ function make_task_pool(dependent_jobs, keep_going::Bool, n_jobs_max::Integer)
 end
 
 
-rm_targets(j::PhonyJob) = nothing
-function rm_targets(j::FileJob)
+rm_targets(j::Job{Symbol}) = nothing
+function rm_targets{S<:AbstractString}(j::Job{S})
     for t in j.ts
         try
             # should I add `recursive=true`?
@@ -315,8 +298,8 @@ function rm_targets(j::FileJob)
 end
 
 
-need_update(::PhonyJob) = true
-function need_update(j::FileJob)
+need_update(::Job{Symbol}) = true
+function need_update{S<:AbstractString}(j::Job{S})
     dep_stat_list = map(stat, j.ds)
     # dependencies should exist
     @assert all(ispath, dep_stat_list)
