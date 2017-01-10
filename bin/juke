@@ -10,8 +10,9 @@ function main(args)
         using Juke
         const cd = Juke.cd
         const run = Juke.run
-        const sh = Juke.sh
+        const mv = Juke.mv
         const rm = Juke.rm
+        const sh = Juke.sh
 
         const __juke_dsl__ = Juke.make_dsl()
         const finish = __juke_dsl__[1]

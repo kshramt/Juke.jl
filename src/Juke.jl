@@ -56,6 +56,12 @@ function run(cmds::Base.AbstractCmd, args...)
 end
 
 
+function mv(path::AbstractString; remove_destination=false)
+    info("mv $path")
+    Base.mv(path; remove_destination=remove_destination)
+end
+
+
 function rm(path::AbstractString; force=false, recursive=false)
     info("rm $path")
     Base.rm(path; force=force, recursive=recursive)
