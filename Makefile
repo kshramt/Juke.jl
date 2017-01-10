@@ -10,11 +10,11 @@ export SHELLOPTS := pipefail:errexit:nounset:noclobber
 JULIA := julia
 
 # Tasks
-.PHONY: all test
-all: test
-test:
-	JULIA_LOAD_PATH="$(CURDIR)/src:$${JULIA_LOAD_PATH:-}" time -p $(JULIA) bin/juke -j8 --keep-going
+.PHONY: all check example
+all:
 
-# Files
+check:
+	JULIA_LOAD_PATH="$(CURDIR)/src:$${JULIA_LOAD_PATH:-}" time -p $(JULIA) bin/juke :test -j8 --keep-going
 
-# Rules
+example:
+	JULIA_LOAD_PATH="$(CURDIR)/src:$${JULIA_LOAD_PATH:-}" time -p $(JULIA) bin/juke :example -j8 --keep-going

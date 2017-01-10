@@ -16,6 +16,7 @@ function main(args)
         const __juke_dsl__ = Juke.make_dsl()
         const finish = __juke_dsl__[1]
         const job = __juke_dsl__[2]
+        const desc = __juke_dsl__[3]
 
         include($(joinpath(pwd(), pargs["file"])))
         finish(
@@ -23,6 +24,7 @@ function main(args)
             $(pargs["keep-going"]),
             $(pargs["jobs"]),
             $(pargs["print-dependencies"]),
+            $(pargs["descriptions"]),
         )
     end
     eval(JukeContext, expr)

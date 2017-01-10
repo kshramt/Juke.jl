@@ -77,6 +77,18 @@ function print_deps(job_of_target::Dict)
 end
 
 
+function print_descs(descriptions::Dict)
+    for ts in sort(collect(keys(descriptions)), by=ts->joinpath(sort(map(string, ts))...))
+        for t in sort(ts)
+            println(repr(t))
+        end
+        for d in descriptions[ts]
+            println('\t', d)
+        end
+    end
+end
+
+
 function graph_of_job_of_target(job_of_target::Dict)
     ret = Dict()
     for (target, j) in job_of_target
@@ -91,8 +103,12 @@ function make_dsl()
     job_of_target = Dict()
     f_of_phony = Dict{Symbol, Function}()
     deps_of_phony = Dict{Symbol, AbstractVector}()
+    desc_stack = []
+    descriptions = Dict{AbstractVector, AbstractVector}()
 
     # DSL
+    desc(s...) = push!(desc_stack, string(s...))
+
     job{S<:AbstractString}(f::Function, target::S) = file_job(f, [target], S[])
     job{S<:AbstractString}(f::Function, targets::Vector{S}) = file_job(f, targets, S[])
     job(f::Function, target::AbstractString, dep::AbstractString) = file_job(f, [target], [dep])
@@ -109,6 +125,7 @@ function make_dsl()
     job(f::Function, target::Symbol, deps::AbstractVector) = phony_job(f, target, deps)
 
     function file_job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, deps::AbstractVector{S})
+        push_descriptions!(descriptions, targets, desc_stack)
         j = Job(f, targets, deps)
         for t in targets
             uniqsetindex!(job_of_target, j, t)
@@ -120,6 +137,7 @@ function make_dsl()
         phony_job(target, deps)
     end
     function phony_job(target::Symbol, deps::AbstractVector)
+        push_descriptions!(descriptions, [target], desc_stack)
         append!(get!(deps_of_phony, target, []), deps)
     end
 
@@ -128,6 +146,7 @@ function make_dsl()
         keep_going::Bool,
         n_jobs::Integer,
         print_dependencies::Bool,
+        print_descriptiosn::Bool,
     )
         @assert n_jobs > 0
 
@@ -136,6 +155,8 @@ function make_dsl()
         f_of_phony = nothing
         if print_dependencies
             print_deps(job_of_target)
+        elseif print_descriptiosn
+            print_descs(descriptions)
         else
             dependent_jobs = Dict()
             leaf_jobs = []
@@ -150,12 +171,21 @@ function make_dsl()
     (
         finish,
         job,
+        desc,
         Dict(
             :job_of_target => job_of_target,
             :deps_of_phony => deps_of_phony,
             :f_of_phony => f_of_phony,
         ),
     )
+end
+
+
+function push_descriptions!(descriptions, targets, desc_stack)
+    if !isempty(desc_stack)
+        append!(get!(descriptions, targets, []), desc_stack)
+        empty!(desc_stack)
+    end
 end
 
 
@@ -327,7 +357,10 @@ ArgParse.@add_arg_table argparse_conf begin
     help="Defer error throws and run as many unaffected jobs as possible"
     action=:store_true
     "--print-dependencies", "-P"
-    help="print dependencies"
+    help="Print dependencies, then exit"
+    action=:store_true
+    "--descriptions", "-D"
+    help="Print descriptions, then exit"
     action=:store_true
 end
 
