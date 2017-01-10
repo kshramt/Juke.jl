@@ -13,7 +13,7 @@ JULIA := julia
 .PHONY: all test
 all: test
 test:
-	JULIA_LOAD_PATH="$(CURDIR)/src:$${JULIA_LOAD_PATH:-}" time -p $(JULIA) bin/juke -j8
+	JULIA_LOAD_PATH="$(CURDIR)/src:$${JULIA_LOAD_PATH:-}" time -p $(JULIA) bin/juke -j8 --keep-going
 
 # Files
 

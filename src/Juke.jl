@@ -11,7 +11,7 @@ type Error <: Exception
 end
 err(s::AbstractString) = throw(Error(s))
 err(s...) = err(string(s...))
-Base.showerror(io::IO, e::Error) = print(io, e.msg)
+Base.showerror(io::IO, e::Error) = print(io, typeof(e), ": ", e.msg)
 #showerror(io::IO, e::Error) = print(io, e.msg)
 
 immutable Cons
@@ -32,8 +32,8 @@ type PhonyJob <: AbstractJob
     ts::Vector{Symbol} # using `Vector` for consistency with `FileJob`
     ds::Vector # `Symbol[]` or `String[]`
     # number of dependencies not ready
-    # - 0 if force able
-    # - -1 if forced
+    # - 0 if executable
+    # - -1 if executed
     n_rest::Int
     visited::Bool
 
@@ -48,8 +48,8 @@ type FileJob{S<:AbstractString} <: AbstractJob
     ts::Vector{S} # targets
     ds::Vector{S} # deps
     # number of dependencies not ready
-    # - 0 if force able
-    # - -1 if forced
+    # - 0 if executable
+    # - -1 if executed
     n_rest::Int
     visited::Bool
 
@@ -140,7 +140,12 @@ function new_dsl()
         append!(get!(deps_of_phony, target, []), deps)
     end
 
-    function finish(targets::AbstractVector, print_dependencies::Bool, n_jobs::Integer)
+    function finish(
+        targets::AbstractVector,
+        keep_going::Bool,
+        n_jobs::Integer,
+        print_dependencies::Bool,
+    )
         @assert n_jobs > 0
 
         collect_phonies!(job_of_target, deps_of_phony, f_of_phony)
@@ -154,7 +159,7 @@ function new_dsl()
             for target in targets
                 make_graph!(dependent_jobs, leaf_jobs, target, job_of_target, job, ConsNull())
             end
-            process_jobs(leaf_jobs, dependent_jobs, n_jobs)
+            process_jobs(leaf_jobs, dependent_jobs, keep_going, n_jobs)
         end
     end
 
@@ -209,19 +214,30 @@ function make_graph!(dependent_jobs, leaf_jobs, target, job_of_target, make_job,
 end
 
 
-function process_jobs(jobs::AbstractVector, dependent_jobs::Dict, n_jobs::Integer)
-    push_job, wait_all_tasks = make_task_pool(n_jobs, dependent_jobs)
+function process_jobs(jobs::AbstractVector, dependent_jobs::Dict, keep_going::Bool, n_jobs::Integer)
+    push_job, wait_all_tasks, defered_errors = make_task_pool(dependent_jobs, keep_going, n_jobs)
     for j in jobs
         push_job(j)
     end
     wait_all_tasks()
+    if length(defered_errors) > 0
+        warn("Following errors have thrown during the execution")
+        warn()
+        for (j, e) in defered_errors
+            warn(j)
+            warn(repr(e))
+            warn()
+        end
+        err("Execution failed.")
+    end
 end
 
 
-function make_task_pool(n_jobs_max, dependent_jobs)
+function make_task_pool(dependent_jobs, keep_going::Bool, n_jobs_max::Integer)
     stack = []
     tasks = Set{Task}()
     all_tasks = []
+    defered_errors = []
 
     function wait_all_tasks()
         # I was not sure whether it is safe to extend a vector in `for x in v`
@@ -241,13 +257,36 @@ function make_task_pool(n_jobs_max, dependent_jobs)
                 while !isempty(stack)
                     j = pop!(stack)
                     yield() # give other tasks a chance to be invoked
-                    force(j, dependent_jobs)
-                    for t in j.ts
-                        # top targets does not have dependent jobs
-                        for dj in get!(dependent_jobs, t, [])
-                            dj.n_rest -= 1
-                            if dj.n_rest == 0
-                                push_job(dj)
+
+                    # Start executing the job
+                    # `Job` is called only once
+                    @assert j.n_rest == 0
+                    got_error = false
+                    if need_update(j)
+                        try
+                            j.f(j)
+                        catch e
+                            got_error = true
+                            # Use string interpolation for async output
+                            warn("$(repr(e))\t$(j)")
+                            rm_targets(j)
+                            if keep_going
+                                push!(defered_errors, (j, e))
+                            else
+                                rethrow(e)
+                            end
+                        end
+                    end
+                    # This job was executed
+                    j.n_rest = -1
+                    if !got_error
+                        for t in j.ts
+                            # top targets does not have dependent jobs
+                            for dj in get!(dependent_jobs, t, [])
+                                dj.n_rest -= 1
+                                if dj.n_rest == 0
+                                    push_job(dj)
+                                end
                             end
                         end
                     end
@@ -261,28 +300,18 @@ function make_task_pool(n_jobs_max, dependent_jobs)
         end
     end
 
-    push_job, wait_all_tasks
+    push_job, wait_all_tasks, defered_errors
 end
 
 
-function force(j, dependent_jobs::Dict)
-    # `Job` is called only once
-    @assert j.n_rest == 0
-    if need_update(j)
+rm_targets(j::PhonyJob) = nothing
+function rm_targets(j::FileJob)
+    for t in j.ts
         try
-            j.f(j)
-        catch e
-            for t in j.ts
-                try
-                    # should I add `recursive=true`?
-                    rm(t, force=true)
-                end
-            end
-            throw(e)
+            # should I add `recursive=true`?
+            rm(t, force=true)
         end
     end
-    # This job was `force`d
-    j.n_rest = -1
 end
 
 
@@ -311,7 +340,10 @@ ArgParse.@add_arg_table argparse_conf begin
     help="Number of parallel jobs"
     arg_type=Int
     default=1
-    "--print_dependencies", "-P"
+    "--keep-going", "-k"
+    help="Defer error throws and run as many unaffected jobs as possible"
+    action=:store_true
+    "--print-dependencies", "-P"
     help="print dependencies"
     action=:store_true
 end
