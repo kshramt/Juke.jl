@@ -56,9 +56,9 @@ function cp(src::AbstractString, dst::AbstractString; remove_destination::Bool=f
 end
 
 
-function run(cmds::Base.AbstractCmd, args...)
-    info(cmds)
-    Base.run(cmds, args...)
+function run(cmd::Base.AbstractCmd)
+    info("run(", cmd, ")")
+    Base.run(cmd)
 end
 
 
