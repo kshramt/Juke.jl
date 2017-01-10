@@ -9,6 +9,7 @@ function main(args)
     expr = quote
         using Juke
         const cd = Juke.cd
+        const cp = Juke.cp
         const run = Juke.run
         const mv = Juke.mv
         const rm = Juke.rm

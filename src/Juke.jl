@@ -50,19 +50,25 @@ function cd(f::Function, d::AbstractString)
 end
 
 
+function cp(src::AbstractString, dst::AbstractString; remove_destination::Bool=false, follow_symlinks::Bool=false)
+    info("cp $src $dst")
+    Base.cp(src, dst; remove_destination=false, follow_symlinks=false)
+end
+
+
 function run(cmds::Base.AbstractCmd, args...)
     info(cmds)
     Base.run(cmds, args...)
 end
 
 
-function mv(path::AbstractString; remove_destination=false)
-    info("mv $path")
-    Base.mv(path; remove_destination=remove_destination)
+function mv(src, dst::AbstractString; remove_destination::Bool=false)
+    info("mv $src $dst")
+    Base.mv(src, dst; remove_destination=remove_destination)
 end
 
 
-function rm(path::AbstractString; force=false, recursive=false)
+function rm(path::AbstractString; force::Bool=false, recursive::Bool=false)
     info("rm $path")
     Base.rm(path; force=force, recursive=recursive)
 end
