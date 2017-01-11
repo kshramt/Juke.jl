@@ -249,8 +249,8 @@ function process_jobs(jobs::AbstractVector, dependent_jobs::Dict, keep_going::Bo
         warn("Following errors have thrown during the execution")
         warn()
         for (j, e) in defered_errors
-            warn(j)
             warn(repr(e))
+            warn(j)
             warn()
         end
         err("Execution failed.")
