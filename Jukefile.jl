@@ -19,13 +19,18 @@ job(jp("test", "runtests.jl.done"), [jp("test", "runtests.jl"), jp("src", "Juke.
     )
 end
 
-job(:example, jp("example", "desc.jl.done"))
-
-job(jp("example", "desc.jl.done"), [jp("bin", "juke"), jp("example", "desc.jl"), jp("src", "Juke.jl")]) do j
-    run(`$(j.ds[1]) -f $(j.ds[2])`)
-    run(`$(j.ds[1]) -f $(j.ds[2]) --print-dependencies`)
-    run(`$(j.ds[1]) -f $(j.ds[2]) -P`)
-    run(`$(j.ds[1]) -f $(j.ds[2]) --descriptions`)
-    run(`$(j.ds[1]) -f $(j.ds[2]) -D`)
-    run(`touch $(j.ts[1])`)
+for (name, f) in (
+    (
+        "desc", j->begin
+            run(`$(j.ds[1]) -f $(j.ds[2])`)
+            run(`$(j.ds[1]) -f $(j.ds[2]) --print-dependencies`)
+            run(`$(j.ds[1]) -f $(j.ds[2]) -P`)
+            run(`$(j.ds[1]) -f $(j.ds[2]) --descriptions`)
+            run(`$(j.ds[1]) -f $(j.ds[2]) -D`)
+            run(`touch $(j.ts[1])`)
+        end,
+    ),
+)
+    job(:example, jp("example", "$(name).jl.done"))
+    job(f, jp("example", "$(name).jl.done"), [jp("bin", "juke"), jp("example", "$(name).jl"), jp("src", "Juke.jl")])
 end
