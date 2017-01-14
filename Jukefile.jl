@@ -7,6 +7,7 @@ end
 
 job(:default)
 
+job(:default, :test)
 job(:test, jp("test", "runtests.jl.done"))
 
 job(jp("test", "runtests.jl.done"), [jp("test", "runtests.jl"), jp("src", "Juke.jl")]) do j
@@ -19,6 +20,7 @@ job(jp("test", "runtests.jl.done"), [jp("test", "runtests.jl"), jp("src", "Juke.
     )
 end
 
+job(:default, :example)
 for (name, f) in (
     (
         "desc", j->begin
