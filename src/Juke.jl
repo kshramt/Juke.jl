@@ -318,8 +318,8 @@ function make_task_pool(dependent_jobs, keep_going::Bool, n_jobs_max::Integer)
                 delete!(tasks, current_task())
             end
             push!(tasks, t)
-            schedule(t)
             push!(all_tasks, t)
+            schedule(t)
         end
     end
 
