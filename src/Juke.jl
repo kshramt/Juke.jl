@@ -80,13 +80,20 @@ end
 
 
 function print_deps(job_of_target::Dict)
-    for (target, deps) in graph_of_job_of_target(job_of_target)
-        println(repr(target))
-        for dep in deps
-            println('\t', repr(dep))
+    for (_, j) in job_of_target
+        for t in j.ts
+            println(label_of(t))
         end
+        for d in j.ds
+            println('\t', label_of(d))
+        end
+        println()
     end
 end
+
+
+label_of(name::Symbol) = ":"*string(name)
+label_of(name::AbstractString) = name
 
 
 function print_descs(descriptions::Dict)
@@ -98,15 +105,6 @@ function print_descs(descriptions::Dict)
             println('\t', d)
         end
     end
-end
-
-
-function graph_of_job_of_target(job_of_target::Dict)
-    ret = Dict()
-    for (target, j) in job_of_target
-        ret[target] = j.ds
-    end
-    ret
 end
 
 
