@@ -2,6 +2,16 @@ using Base.Test: @test, @test_throws
 
 using Juke
 
+
+function graph_of_job_of_target(job_of_target::Dict)
+    ret = Dict()
+    for (target, j) in job_of_target
+        ret[target] = j.ds
+    end
+    ret
+end
+
+
 let
     c = Juke.Cons(3, Juke.ConsNull())
     @assert !(:a in c)
@@ -21,7 +31,7 @@ let
     job(:default, "e.exe")
     job(j->nothing, ["d.exe", "c.exe", "e.exe"], "c.o")
 
-    @test Juke.graph_of_job_of_target(
+    @test graph_of_job_of_target(
         Juke.collect_phonies!(
             internals[:job_of_target],
             internals[:deps_of_phony],
