@@ -29,6 +29,7 @@ type Job{T, D}
     f::Function
     ts::Vector{T} # targets
     ds::Vector{D} # dependencies
+    unique_ds::Vector{D} # unique dependencies
     # number of dependencies not ready
     # - 0 if executable
     # - -1 if executed
@@ -36,8 +37,8 @@ type Job{T, D}
     visited::Bool
 
     function Job(f, ts, ds)
-        length(unique(ds)) == length(ds) || err("Dependencies should not be duplicated: $(ds)")
-        new(f, ts, ds, length(ds), false)
+        unique_ds = unique(ds)
+        new(f, ts, ds, unique_ds, length(unique_ds), false)
     end
 end
 Job{D}(f::Function, t::Symbol, ds::AbstractVector{D}) = Job{Symbol, D}(f, [t], ds)
@@ -84,7 +85,7 @@ function print_deps(job_of_target::Dict)
         for t in j.ts
             println(label_of(t))
         end
-        for d in j.ds
+        for d in j.unique_ds
             println('\t', label_of(d))
         end
         println()
@@ -227,11 +228,11 @@ function make_graph!(dependent_jobs, leaf_jobs, target, job_of_target, make_job,
     j.visited = true
 
     current_call_chain = Cons(target, call_chain)
-    for dep in j.ds
+    for dep in j.unique_ds
         push!(get!(dependent_jobs, dep, []), j)
         make_graph!(dependent_jobs, leaf_jobs, dep, job_of_target, make_job, current_call_chain)
     end
-    isempty(j.ds) && push!(leaf_jobs, j)
+    isempty(j.unique_ds) && push!(leaf_jobs, j)
 
     dependent_jobs, leaf_jobs
 end
@@ -340,7 +341,7 @@ end
 
 need_update(::Job{Symbol}) = true
 function need_update{S<:AbstractString}(j::Job{S})
-    dep_stat_list = map(stat, j.ds)
+    dep_stat_list = map(stat, j.unique_ds)
     # dependencies should exist
     @assert all(ispath, dep_stat_list)
     target_stat_list = map(stat, j.ts)
