@@ -376,7 +376,8 @@ ArgParse.@add_arg_table argparse_conf begin
 end
 
 
-function parse_args(args)
+function parse_args(args, prog)
+    argparse_conf.prog = prog
     pargs = ArgParse.parse_args(args, argparse_conf)
     pargs["targets"] = parse_names(pargs["targets"])
     pargs

@@ -4,7 +4,7 @@ using Juke
 
 
 function main(args)
-    pargs = Juke.parse_args(args)
+    pargs = Juke.parse_args(args, @__FILE__)
     JukeContext = Module()
     expr = quote
         using Juke
