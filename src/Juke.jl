@@ -20,7 +20,6 @@ immutable Cons
 end
 immutable ConsNull
 end
-cons(hd, tl) = Cons(hd, tl)
 Base.in(x, c::ConsNull) = false
 Base.in(x, c::Cons) = c.hd == x || x in c.tl
 
