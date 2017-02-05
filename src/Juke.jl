@@ -178,11 +178,11 @@ function make_dsl()
     end
 
     # Export
-    (
-        finish,
-        job,
-        desc,
-        Dict(
+    Dict(
+        :finish => finish,
+        :job => job,
+        :desc => desc,
+        :internals => Dict(
             :job_of_target => job_of_target,
             :deps_of_phony => deps_of_phony,
             :f_of_phony => f_of_phony,

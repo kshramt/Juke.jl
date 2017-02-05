@@ -20,12 +20,20 @@ let
 end
 
 let
-    finish, job, desc, internals = Juke.make_dsl()
+    __juke_dsl__= Juke.make_dsl()
+    finish = __juke_dsl__[:finish]
+    job = __juke_dsl__[:job]
+    desc = __juke_dsl__[:desc]
+    internals = __juke_dsl__[:internals]
     job(j->nothing, :default, "not_exist.html")
 end
 
 let
-    finish, job, desc, internals = Juke.make_dsl()
+    __juke_dsl__= Juke.make_dsl()
+    finish = __juke_dsl__[:finish]
+    job = __juke_dsl__[:job]
+    desc = __juke_dsl__[:desc]
+    internals = __juke_dsl__[:internals]
 
     job(:default, "c.exe")
     job(:default, "e.exe")

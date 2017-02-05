@@ -5,7 +5,7 @@ using Juke
 
 function main(args)
     pargs = Juke.parse_args(args, @__FILE__)
-    JukeContext = Module()
+    JukeBox = Module()
     expr = quote
         using Juke
         const cd = Juke.cd
@@ -16,9 +16,9 @@ function main(args)
         const sh = Juke.sh
 
         const __juke_dsl__ = Juke.make_dsl()
-        const finish = __juke_dsl__[1]
-        const job = __juke_dsl__[2]
-        const desc = __juke_dsl__[3]
+        const finish = __juke_dsl__[:finish]
+        const job = __juke_dsl__[:job]
+        const desc = __juke_dsl__[:desc]
 
         include($(joinpath(pwd(), pargs["file"])))
         finish(
@@ -29,7 +29,7 @@ function main(args)
             $(pargs["descriptions"]),
         )
     end
-    eval(JukeContext, expr)
+    eval(JukeBox, expr)
 end
 
 if realpath(PROGRAM_FILE) == realpath(@__FILE__)
