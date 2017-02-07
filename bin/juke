@@ -20,6 +20,7 @@ function main(args)
             $(pargs["targets"]),
             $(pargs["keep-going"]),
             $(pargs["jobs"]),
+            $(pargs["load-average"]),
             $(pargs["print-dependencies"]),
             $(pargs["descriptions"]),
         )

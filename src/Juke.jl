@@ -155,6 +155,7 @@ function make_dsl()
         targets::AbstractVector,
         keep_going::Bool,
         n_jobs::Integer,
+        load_max,
         print_dependencies::Bool,
         print_descriptiosn::Bool,
     )
@@ -173,7 +174,7 @@ function make_dsl()
             for target in targets
                 make_graph!(dependent_jobs, leaf_jobs, target, job_of_target, job, ConsNull())
             end
-            process_jobs(leaf_jobs, dependent_jobs, keep_going, n_jobs)
+            process_jobs(leaf_jobs, dependent_jobs, keep_going, n_jobs, load_max)
         end
     end
 
@@ -237,8 +238,8 @@ function make_graph!(dependent_jobs, leaf_jobs, target, job_of_target, make_job,
 end
 
 
-function process_jobs(jobs::AbstractVector, dependent_jobs::Dict, keep_going::Bool, n_jobs::Integer)
-    push_job, wait_all_tasks, defered_errors = make_task_pool(dependent_jobs, keep_going, n_jobs)
+ function process_jobs(jobs::AbstractVector, dependent_jobs::Dict, keep_going::Bool, n_jobs::Integer, load_max)
+    push_job, wait_all_tasks, defered_errors = make_task_pool(dependent_jobs, keep_going, n_jobs, load_max)
     for j in jobs
         push_job(j)
     end
@@ -256,11 +257,14 @@ function process_jobs(jobs::AbstractVector, dependent_jobs::Dict, keep_going::Bo
 end
 
 
-function make_task_pool(dependent_jobs, keep_going::Bool, n_jobs_max::Integer)
+function make_task_pool(dependent_jobs, keep_going::Bool, n_jobs_max::Integer, load_max)
+    @assert n_jobs_max > 0
+    @assert load_max > 0
     stack = []
     tasks = Set{Task}()
     all_tasks = []
     defered_errors = []
+    n_running = 0
 
     function wait_all_tasks()
         # I was not sure whether it is safe to extend a vector in `for x in v`
@@ -286,6 +290,11 @@ function make_task_pool(dependent_jobs, keep_going::Bool, n_jobs_max::Integer)
                     @assert j.n_rest == 0
                     got_error = false
                     if need_update(j)
+                        @assert n_running >= 0
+                        while n_running > 0 && Sys.loadavg()[1] > load_max
+                            sleep(1.0)
+                        end
+                        n_running += 1
                         try
                             j.f(j)
                         catch e
@@ -299,6 +308,7 @@ function make_task_pool(dependent_jobs, keep_going::Bool, n_jobs_max::Integer)
                                 rethrow(e)
                             end
                         end
+                        n_running -= 1
                     end
                     # This job was executed
                     j.n_rest = -1
@@ -367,6 +377,11 @@ ArgParse.@add_arg_table argparse_conf begin
     "--keep-going", "-k"
     help="Defer error throws and run as many unaffected jobs as possible"
     action=:store_true
+    "--load-average", "-l"
+    help="No new job is started if there are other running jobs and the load average is higher than the specified value"
+    arg_type=Float64
+    default=typemax(Float64)
+    range_tester=x->x > 0
     "--print-dependencies", "-P"
     help="Print dependencies, then exit"
     action=:store_true
