@@ -363,6 +363,7 @@ ArgParse.@add_arg_table argparse_conf begin
     help="Number of parallel jobs"
     arg_type=Int
     default=1
+    range_tester=x->x > 0
     "--keep-going", "-k"
     help="Defer error throws and run as many unaffected jobs as possible"
     action=:store_true
