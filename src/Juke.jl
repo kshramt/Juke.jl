@@ -291,8 +291,10 @@ function make_task_pool(dependent_jobs, keep_going::Bool, n_jobs_max::Integer, l
                     got_error = false
                     if need_update(j)
                         @assert n_running >= 0
-                        while n_running > 0 && Sys.loadavg()[1] > load_max
-                            sleep(1.0)
+                        if isfinite(load_max)
+                            while n_running > 0 && Sys.loadavg()[1] > load_max
+                                sleep(1.0)
+                            end
                         end
                         n_running += 1
                         try
