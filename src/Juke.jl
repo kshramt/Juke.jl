@@ -35,13 +35,13 @@ type Job{T, D}
     n_rest::Int
     visited::Bool
 
-    function Job(f, ts, ds)
+    function Job{T, D}(f, ts, ds) where {T, D}
         unique_ds = unique(ds)
         new(f, ts, ds, unique_ds, length(unique_ds), false)
     end
 end
-Job{D}(f::Function, t::Symbol, ds::AbstractVector{D}) = Job{Symbol, D}(f, [t], ds)
-Job{S<:AbstractString}(f::Function, ts::AbstractVector{S}, ds::AbstractVector{S}) = Job{S, S}(f, ts, ds)
+Job(f::Function, t::Symbol, ds::AbstractVector{D}) where {D} = Job{Symbol, D}(f, [t], ds)
+Job(f::Function, ts::AbstractVector{S}, ds::AbstractVector{S}) where {S<:AbstractString} = Job{S, S}(f, ts, ds)
 
 
 function cd(f::Function, d::AbstractString)
@@ -119,12 +119,12 @@ function make_dsl()
     # DSL
     desc(s...) = push!(desc_stack, string(s...))
 
-    job{S<:AbstractString}(f::Function, target::S) = file_job(f, [target], S[])
-    job{S<:AbstractString}(f::Function, targets::Vector{S}) = file_job(f, targets, S[])
+    job(f::Function, target::S) where {S<:AbstractString} = file_job(f, [target], S[])
+    job(f::Function, targets::Vector{S}) where {S<:AbstractString} = file_job(f, targets, S[])
     job(f::Function, target::AbstractString, dep::AbstractString) = file_job(f, [target], [dep])
-    job{S<:AbstractString}(f::Function, target::AbstractString, deps::AbstractVector{S}) = file_job(f, [target], deps)
-    job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, dep::AbstractString) = file_job(f, targets, [dep])
-    job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, deps::AbstractVector{S}) = file_job(f, targets, deps)
+    job(f::Function, target::AbstractString, deps::AbstractVector{S}) where {S<:AbstractString} = file_job(f, [target], deps)
+    job(f::Function, targets::AbstractVector{S}, dep::AbstractString) where {S<:AbstractString} = file_job(f, targets, [dep])
+    job(f::Function, targets::AbstractVector{S}, deps::AbstractVector{S}) where {S<:AbstractString} = file_job(f, targets, deps)
 
     job(target::Symbol) = phony_job(target, Symbol[])
     job(target::Symbol, dep::Union{Symbol, AbstractString}) = phony_job(target, [dep])
@@ -134,7 +134,7 @@ function make_dsl()
     job(f::Function, target::Symbol, dep::Union{Symbol, AbstractString}) = phony_job(f, target, [dep])
     job(f::Function, target::Symbol, deps::AbstractVector) = phony_job(f, target, deps)
 
-    function file_job{S<:AbstractString}(f::Function, targets::AbstractVector{S}, deps::AbstractVector{S})
+    function file_job(f::Function, targets::AbstractVector{S}, deps::AbstractVector{S}) where {S<:AbstractString}
         push_descriptions!(descriptions, targets, desc_stack)
         j = Job(f, targets, deps)
         for t in targets
@@ -340,7 +340,7 @@ end
 
 
 rm_targets(j::Job{Symbol}) = nothing
-function rm_targets{S<:AbstractString}(j::Job{S})
+function rm_targets(j::Job{S}) where {S<:AbstractString}
     for t in j.ts
         try
             # should I add `recursive=true`?
@@ -351,7 +351,7 @@ end
 
 
 need_update(::Job{Symbol}) = true
-function need_update{S<:AbstractString}(j::Job{S})
+function need_update(j::Job{S}) where {S<:AbstractString}
     dep_stat_list = map(stat, j.unique_ds)
     # dependencies should exist
     @assert all(ispath, dep_stat_list)
